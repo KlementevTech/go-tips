@@ -1,0 +1,6 @@
+[pprof]
+host = "0.0.0.0"
+port = 6060
+enable = true
+read_header_timeout = "3s"
+shutdown_timeout = "10s"
