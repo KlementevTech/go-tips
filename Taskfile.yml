@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  GOLANGCI_VERSION: v2.11.3
+
+tasks:
+  default:
+    desc: "Листинг команд"
+    cmds:
+      - task --list
+    silent: true
+
+  lint:
+    desc: "Проверка линтером"
+    cmds:
+      - echo "Проверка линтером"
+      - golangci-lint run ./...
+
+  format:
+    desc: "Форматирование"
+    cmds:
+      - echo "Форматирование"
+      - gofumpt -l -w .
+
+  test:
+    desc: "Запуск тестов"
+    cmds:
+      - echo "Проверка тестами"
+      - go test -v ./...
+
+  tidy:
+    desc: "Обновляет go.mod и go.sum"
+    cmds:
+      - echo "Очистка зависимостей"
+      - go mod tidy
+
+  pre-commit:
+    desc: "Запуск всех проверок перед коммитом"
+    cmds:
+      - task: format
+      - task: lint
+      - task: test
+      - task: tidy
+      - echo "[OK] Все проверки пройдены"
+
+  install-tools:
+    desc: "Установка dev инструментов"
+    cmds:
+      - echo "Установка линтера golangci-lint, версия [{{.GOLANGCI_VERSION}}]"
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
+      - echo "Установка форматера gofumpt"
+      - go install mvdan.cc/gofumpt@latest
