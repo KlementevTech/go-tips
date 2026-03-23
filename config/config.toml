@@ -4,3 +4,7 @@ port = 6060
 enable = true
 read_header_timeout = "3s"
 shutdown_timeout = "10s"
+
+[log]
+format = "json"
+level = "info"

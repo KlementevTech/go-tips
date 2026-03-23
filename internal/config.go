@@ -17,11 +17,25 @@ type PprofConfig struct {
 	ShutdownTimeout   time.Duration `mapstructure:"shutdown_timeout"`
 }
 
-type Config struct {
-	Pprof PprofConfig `mapstructure:"pprof"`
+type LogConfig struct {
+	Format string `mapstructure:"format"`
+	Level  string `mapstructure:"level"`
 }
 
-func LoadConfigFromFile(path, envPrefix string) (*Config, error) {
+type Config struct {
+	Pprof PprofConfig `mapstructure:"pprof"`
+	Log   LogConfig   `mapstructure:"log"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	return loadConfig(path, "")
+}
+
+func loadConfig(path, envPrefix string) (*Config, error) {
+	if path == "" {
+		return nil, errors.New("config file path is required")
+	}
+
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix(envPrefix)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -26,32 +25,46 @@ func run() error {
 	flag.StringVar(&path, "c", "", "config file")
 	flag.Parse()
 
-	cfg, err := internal.LoadConfigFromFile(path, "")
+	cfg, err := internal.LoadConfig(path)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	notifyCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	err = internal.InitLog(cfg.Log)
+	if err != nil {
+		return fmt.Errorf("init log: %w", err)
+	}
+
+	g, gCtx := errgroup.WithContext(context.Background())
+	ctx, stop := withInterrupt(gCtx)
 	defer stop()
 
-	defer func() {
-		err = context.Cause(notifyCtx)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			slog.Default().InfoContext(notifyCtx, "received signal", "signal", err)
-		}
-	}()
-
-	g, gCtx := errgroup.WithContext(notifyCtx)
-
 	if cfg.Pprof.Enable {
-		err = internal.RunPprofServer(gCtx, g, cfg.Pprof)
+		err = internal.RunPprofServer(ctx, g, cfg.Pprof)
 		if err != nil {
 			return fmt.Errorf("run pprof server: %w", err)
 		}
 	}
 
-	if err = g.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return g.Wait()
+}
+
+func withInterrupt(ctx context.Context) (context.Context, context.CancelFunc) {
+	newCtx, cancel := context.WithCancel(ctx)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		defer signal.Stop(sigs)
+
+		select {
+		case sig := <-sigs:
+			slog.Default().Info("received signal", "signal", sig.String())
+			cancel()
+		case <-newCtx.Done():
+		}
+	}()
+
+	return newCtx, cancel
 }
