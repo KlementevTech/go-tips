@@ -9,6 +9,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+type GRPCConfig struct {
+	Host              string        `mapstructure:"host"`
+	Port              int           `mapstructure:"port"`
+	ShutdownTimeout   time.Duration `mapstructure:"shutdown_timeout"`
+	MaxRecvMsgSize    int           `mapstructure:"max_recv_msg_size"`
+	MaxSendMsgSize    int           `mapstructure:"max_send_msg_size"`
+	MaxConnectionIdle time.Duration `mapstructure:"max_connection_idle"`
+	MaxConnectionAge  time.Duration `mapstructure:"max_connection_age"`
+	EnableReflection  bool          `mapstructure:"enable_reflection"`
+	EnableHealth      bool          `mapstructure:"enable_health"`
+}
+
 type PprofConfig struct {
 	Host              string        `mapstructure:"host"`
 	Port              int           `mapstructure:"port"`
@@ -23,6 +35,7 @@ type LogConfig struct {
 }
 
 type Config struct {
+	GRPC  GRPCConfig  `mapstructure:"grpc"`
 	Pprof PprofConfig `mapstructure:"pprof"`
 	Log   LogConfig   `mapstructure:"log"`
 }

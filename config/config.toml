@@ -1,7 +1,18 @@
+[grpc]
+host = "0.0.0.0"
+port = 50051
+enable_reflection = true
+enable_health = true
+shutdown_timeout = "10s"
+max_recv_msg_size = 8388608 # 8 MB
+max_send_msg_size = 8388608  # 8 MB
+max_connection_idle = "5m"
+max_connection_age = "10m"
+
 [pprof]
 host = "0.0.0.0"
 port = 6060
-enable = true
+enable = false
 read_header_timeout = "3s"
 shutdown_timeout = "10s"
 

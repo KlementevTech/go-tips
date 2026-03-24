@@ -9,49 +9,54 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"strconv"
-
-	"golang.org/x/sync/errgroup"
 )
 
-func RunPprofServer(ctx context.Context, g *errgroup.Group, cfg PprofConfig) error {
+func RunPprofServer(ctx context.Context, cfg PprofConfig) error {
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 
 	var lc net.ListenConfig
 	lis, err := lc.Listen(ctx, "tcp", addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("listen pprof: %w", err)
 	}
 
 	slog.Default().InfoContext(ctx, "pprof server is listening", "address", addr)
 
+	handler := newPprofHandler()
+
 	srv := &http.Server{
-		Handler:           newPprofHandler(),
+		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 	}
 
-	g.Go(func() error {
-		serveErr := srv.Serve(lis)
-		if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
-			return serveErr
+	errChan := make(chan error, 1)
+	defer close(errChan)
+
+	go func() {
+		srvErr := srv.Serve(lis)
+		if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
+			errChan <- fmt.Errorf("serve pprof server: %w", srvErr)
+			return
 		}
+	}()
 
-		slog.Default().InfoContext(ctx, "pprof server is stopped")
-		return nil
-	})
-
-	g.Go(func() error {
-		<-ctx.Done()
+	select {
+	case err = <-errChan:
+		return err
+	case <-ctx.Done():
+		slog.Default().InfoContext(ctx, "shutting down pprof server")
 
 		stopCtx, stop := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer stop()
 
-		if stopErr := srv.Shutdown(stopCtx); stopErr != nil {
-			return fmt.Errorf("shutdown pprof server: %w", stopErr)
+		err = srv.Shutdown(stopCtx)
+		if err != nil {
+			return fmt.Errorf("pprof server shutdown: %w", err)
 		}
-		return nil
-	})
 
-	return nil
+		slog.Default().InfoContext(ctx, "pprof server stopped gracefully")
+		return nil
+	}
 }
 
 func newPprofHandler() http.Handler {
