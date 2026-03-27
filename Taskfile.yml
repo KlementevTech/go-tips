@@ -3,7 +3,12 @@
 version: '3'
 
 vars:
-  GOLANGCI_VERSION: v2.11.3
+  DB_DRIVER: sqlite3
+  DB_NAME: 'sqlite3/data/gotips.db'
+  MIGRATIONS_DIR: 'migrations/schema'
+
+  GOLANGCI_VERSION: v2.11.4
+  BUF_VERSION: v1.68.4
 
 tasks:
   default:
@@ -15,40 +20,145 @@ tasks:
   lint:
     desc: "Проверка линтером"
     cmds:
-      - echo "Проверка линтером"
       - golangci-lint run ./...
+
+  lint-fix:
+    desc: "Форматирование линтером"
+    cmds:
+      - golangci-lint run --fix
 
   format:
     desc: "Форматирование"
     cmds:
-      - echo "Форматирование"
       - gofumpt -l -w .
 
   test:
     desc: "Запуск тестов"
     cmds:
-      - echo "Проверка тестами"
       - go test -v ./...
 
   tidy:
-    desc: "Обновляет go.mod и go.sum"
+    desc: "Очистка зависимостей"
     cmds:
-      - echo "Очистка зависимостей"
       - go mod tidy
 
   pre-commit:
-    desc: "Запуск всех проверок перед коммитом"
+    desc: "Запуск проверок перед коммитом"
     cmds:
+      - cmd: echo "Форматирование..."
+        silent: true
       - task: format
+
+      - cmd: echo "Форматирование линтером..."
+        silent: true
+      - task: lint-fix
+
+      - cmd: echo "Проверка линтером..."
+        silent: true
       - task: lint
+
+      - cmd: echo "Проверка proto файлов..."
+        silent: true
+      - task: lint-proto
+
+      - cmd: echo "Запуск тестов..."
+        silent: true
       - task: test
+
+      - cmd: echo "Очистка зависимостей..."
+        silent: true
       - task: tidy
-      - echo "[OK] Все проверки пройдены"
+
+      - cmd: echo "[OK] Все проверки пройдены."
+        silent: true
+
+  gen-pb:
+    desc: "Генерирует protobuf файлы"
+    cmds:
+      - buf generate
+
+  lint-proto:
+    desc: "Проверка proto файлов"
+    cmds:
+      - buf lint
+
+  lint-proto-changes:
+    desc: "Проверка обратной совместимости proto файлов"
+    cmds:
+      - buf breaking --against ".git#branch=main"
+
+  migrate-new:
+    desc: "Создать миграцию. Пример: task migrate-new name=add_parts"
+    vars:
+      NAME: '{{.name | default "migration"}}'
+    cmds:
+      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} create {{.NAME}} sql
+    preconditions:
+      - sh: 'test -n "{{.NAME}}"'
+        msg: "Ошибка: нужно указать имя. Используй: task create-migration name=имя_миграции"
+
+  migrate-up:
+    desc: "Накатить миграции SQLite"
+    cmds:
+      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} up
+
+  migrate-down:
+    desc: "Откатить последнюю миграцию"
+    cmds:
+      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} down
+
+  migrate-reset:
+    desc: "Сбросить ВСЮ базу (удалить все таблицы)"
+    cmds:
+      - goose sqlite3 {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} reset
+
+  migrate-status:
+    desc: "Проверить статус миграций"
+    cmds:
+      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} status
+
+  gen-sqlc:
+    desc: "Кодогенерация sqlc"
+    cmds:
+      - sqlc generate
 
   install-tools:
     desc: "Установка dev инструментов"
     cmds:
-      - echo "Установка линтера golangci-lint, версия [{{.GOLANGCI_VERSION}}]"
-      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
-      - echo "Установка форматера gofumpt"
+      - cmd: echo "Установка линтера golangci-lint..."
+        silent: true
+      - task: install-linter
+
+      - cmd: echo "Установка форматера gofumpt..."
+        silent: true
       - go install mvdan.cc/gofumpt@latest
+
+      - cmd: echo "Установка buf..."
+        silent: true
+      - go install github.com/bufbuild/buf/cmd/buf@{{.BUF_VERSION}}
+
+      - cmd: echo "Установка protoc плагинов..."
+        silent: true
+      - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - cmd: echo "Установка db мигратора goose..."
+        silent: true
+      - go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - cmd: echo "Установка sqlc..."
+        silent: true
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+      - cmd: echo "[OK] Все Dev зависимости установлены."
+        silent: true
+
+  install-linter:
+    desc: "Установка golangci-lint"
+    cmds:
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
+
+  install-grpcurl:
+    desc: "Устанавливает grpcurl"
+    cmds:
+      - go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest

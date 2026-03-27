@@ -1,0 +1,27 @@
+[grpc]
+address = ":50051"
+enable_reflection = true
+enable_health = true
+shutdown_timeout = "10s"
+max_recv_msg_size = 8_388_608
+max_send_msg_size = 8_388_608
+max_connection_idle = "5m"
+max_connection_age = "10m"
+
+[sqlite]
+db_file = "sqlite3/data/gotips.db"
+max_open_conns = 25
+max_idle_conns = 25
+conn_max_lifetime = "5m"
+connect_timeout = "5s"
+
+[cache]
+size = 1000
+ttl = "1s"
+
+[pprof]
+address = ":6060"
+enable = false
+
+[logger]
+level = "info"
