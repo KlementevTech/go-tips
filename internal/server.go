@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log/slog"
 	"syscall"
 
 	"github.com/KlementevTech/gotips/internal/config"
@@ -22,35 +21,26 @@ var (
 	version = "unknown"
 )
 
-type params struct {
-	app     string
-	version string
-	cfgPath string
-}
-
 func Run() error {
-	p := params{
-		app:     app,
-		version: version,
-	}
-
-	flag.StringVar(&p.cfgPath, "c", "", "config file path")
+	var cfgPath string
+	flag.StringVar(&cfgPath, "c", "", "config file path")
 	flag.Parse()
-	return run(p)
+
+	return run(cfgPath)
 }
 
-func run(p params) error {
-	cfg, err := config.LoadFromFile(p.cfgPath)
+func run(cfgPath string) error {
+	changeLvl := defaultJSONLogger(app, version)
+
+	cfg, err := config.LoadFromFile(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	err = setupJSONLogger(p.app, p.version, cfg.Logger.Level)
+	err = changeLvl(cfg.Logger.Level)
 	if err != nil {
-		return fmt.Errorf("setup logger: %w", err)
+		return fmt.Errorf("failed to change log level: %w", err)
 	}
-
-	slog.Default().Info("running go-tips app", slog.String("config", p.cfgPath))
 
 	ctx, cancel := waitForSignal(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

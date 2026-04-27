@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -33,6 +34,8 @@ func LoadFromFile(path string) (*Config, error) {
 	if path == "" {
 		return nil, errors.New("config file path is required")
 	}
+
+	slog.Default().Info("loading config from file", "path", path)
 	return loadFromFile[Config](path, "")
 }
 
