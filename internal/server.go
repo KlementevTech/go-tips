@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"syscall"
 
@@ -16,20 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	app     = "go-tips"
-	version = "unknown"
-)
-
-func Run() error {
-	var cfgPath string
-	flag.StringVar(&cfgPath, "c", "", "config file path")
-	flag.Parse()
-
-	return run(cfgPath)
-}
-
-func run(cfgPath string) error {
+func Run(app, version, cfgPath string) error {
 	changeLvl := defaultJSONLogger(app, version)
 
 	cfg, err := config.LoadFromFile(cfgPath)

@@ -9,7 +9,7 @@ max_connection_idle = "5m"
 max_connection_age = "10m"
 
 [sqlite]
-db_file = "/data/gotips/gotips.db"
+db_file = "sqlite3/data/gotips.db"
 max_open_conns = 25
 max_idle_conns = 25
 conn_max_lifetime = "5m"
@@ -21,7 +21,7 @@ ttl = "1s"
 
 [pprof]
 address = ":6060"
-enable = true
+enable = false
 
 [logger]
 level = "info"

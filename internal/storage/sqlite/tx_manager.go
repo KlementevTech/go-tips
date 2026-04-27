@@ -16,7 +16,6 @@ func NewTxManager(db *sql.DB) *TxManager {
 	return &TxManager{db: db}
 }
 
-//nolint:nonamedreturns // nolint
 func (m *TxManager) WithinTransaction(ctx context.Context, txFn func(ctx context.Context) error) (err error) {
 	if _, ok := ctx.Value(txCtxKey{}).(*sql.Tx); ok {
 		return txFn(ctx)

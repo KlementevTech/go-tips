@@ -27,12 +27,13 @@ func NewDB(ctx context.Context, cfg Config) (*sql.DB, CloseFunc, error) {
 
 	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL", absPath)
 
-	slog.Default().InfoContext(ctx, "opening sqlite", slog.String("dsn", dsn))
 	var db *sql.DB
 	db, err = sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid dsn: %w", err)
 	}
+
+	slog.Default().InfoContext(ctx, "SQLite opened")
 
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)

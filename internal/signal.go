@@ -8,7 +8,14 @@ import (
 )
 
 func waitForSignal(ctx context.Context, sigs ...os.Signal) (context.Context, context.CancelFunc) {
-	slog.Default().InfoContext(ctx, "waiting for signal", slog.Any("signal", sigsToStrings(sigs...)))
+	toStrings := func(sigs ...os.Signal) (res []string) {
+		for _, sig := range sigs {
+			res = append(res, sig.String())
+		}
+		return res
+	}
+
+	slog.Default().InfoContext(ctx, "waiting for signal", slog.Any("signal", toStrings(sigs...)))
 	sigChan := make(chan os.Signal, len(sigs))
 	signal.Notify(sigChan, sigs...)
 
@@ -26,15 +33,4 @@ func waitForSignal(ctx context.Context, sigs ...os.Signal) (context.Context, con
 	}()
 
 	return newCtx, cancel
-}
-
-func sigsToStrings(sigs ...os.Signal) []string {
-	if len(sigs) == 0 {
-		return nil
-	}
-	res := make([]string, len(sigs))
-	for i, sig := range sigs {
-		res[i] = sig.String()
-	}
-	return res
 }
