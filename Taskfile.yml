@@ -45,8 +45,8 @@ tasks:
           --name gotips \
           -p 50051:50051 \
           -p 6060:6060 \
-          -v $(pwd)/config/config.dev.toml:/etc/gotips/config.toml:ro \
-          -v $(pwd)/sqlite3/data:/data/gotips:rw \
+          -v config/config.dev.toml:/etc/gotips/config.toml:ro \
+          -v sqlite3/data:/data/gotips:rw \
           klementevtech/gotips:latest
 
   lint:
@@ -118,6 +118,21 @@ tasks:
     desc: "Проверка обратной совместимости proto файлов"
     cmds:
       - buf breaking --against ".git#branch=main"
+
+  test-perf:
+    desc: "Запускает нагрузочный тест"
+    cmds:
+      - |
+        docker compose -f test/k6/compose.yaml \
+          up \
+          --abort-on-container-exit \
+          --exit-code-from k6 \
+          --attach k6
+        
+  perf-stats:
+    desc: "Выводит статистику Docker"
+    cmds:
+      - docker stats
 
   migrate-new:
     desc: "Создать миграцию. Пример: task migrate-new name=add_parts"
