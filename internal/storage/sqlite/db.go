@@ -33,8 +33,6 @@ func NewDB(ctx context.Context, cfg Config) (*sql.DB, CloseFunc, error) {
 		return nil, nil, fmt.Errorf("invalid dsn: %w", err)
 	}
 
-	slog.Default().InfoContext(ctx, "SQLite opened")
-
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
@@ -50,7 +48,7 @@ func NewDB(ctx context.Context, cfg Config) (*sql.DB, CloseFunc, error) {
 		if err = db.Close(); err != nil {
 			slog.Default().ErrorContext(ctx, "failed to close sqlite", "error", err)
 		} else {
-			slog.Default().InfoContext(ctx, "sqlite closed gracefully")
+			slog.Default().InfoContext(ctx, "SQLite closed gracefully")
 		}
 	}, nil
 }

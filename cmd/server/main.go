@@ -8,17 +8,14 @@ import (
 	"github.com/KlementevTech/gotips/internal"
 )
 
-var (
-	app     = "gotips"
-	version = "unknown"
-	config  string
-)
+var version = "dev"
 
 func main() {
+	var config string
 	flag.StringVar(&config, "c", "", "config file path")
 	flag.Parse()
 
-	err := internal.Run(app, version, config)
+	err := internal.Run(version, config)
 	if err != nil {
 		slog.Default().Error("failed to run", "error", err)
 		os.Exit(1)

@@ -3,11 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/KlementevTech/gotips/internal/pprof"
+	"github.com/KlementevTech/gotips/internal/storage/postgres"
 	"github.com/KlementevTech/gotips/internal/storage/sqlite"
 	"github.com/KlementevTech/gotips/internal/transport/grpc"
 	"github.com/spf13/viper"
@@ -18,16 +18,18 @@ type Logger struct {
 }
 
 type Cache struct {
-	Size int           `mapstructure:"size"`
-	TTL  time.Duration `mapstructure:"ttl"`
+	Size    int           `mapstructure:"size"`
+	TTL     time.Duration `mapstructure:"ttl"`
+	Timeout time.Duration `mapstructure:"timeout"`
 }
 
 type Config struct {
-	GRPC   grpc.Config   `mapstructure:"grpc"`
-	Pprof  pprof.Config  `mapstructure:"pprof"`
-	SQLite sqlite.Config `mapstructure:"sqlite"`
-	Cache  Cache         `mapstructure:"cache"`
-	Logger Logger        `mapstructure:"logger"`
+	GRPC     grpc.Config     `mapstructure:"grpc"`
+	Postgres postgres.Config `mapstructure:"postgres"`
+	SQLite   sqlite.Config   `mapstructure:"sqlite"`
+	Cache    Cache           `mapstructure:"cache"`
+	Logger   Logger          `mapstructure:"logger"`
+	Pprof    pprof.Config    `mapstructure:"pprof"`
 }
 
 func LoadFromFile(path string) (*Config, error) {
@@ -35,13 +37,7 @@ func LoadFromFile(path string) (*Config, error) {
 		return nil, errors.New("config file path is required")
 	}
 
-	cfg, err := loadFromFile[Config](path, "")
-	if err != nil {
-		return nil, err
-	}
-
-	slog.Default().Info("config loaded", "config", path)
-	return cfg, nil
+	return loadFromFile[Config](path, "")
 }
 
 func loadFromFile[T any](path, envPrefix string) (*T, error) {

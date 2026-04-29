@@ -3,43 +3,55 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"syscall"
 
 	"github.com/KlementevTech/gotips/internal/config"
 	catalogv1 "github.com/KlementevTech/gotips/internal/grpc/handlers/catalog/v1"
 	"github.com/KlementevTech/gotips/internal/pprof"
 	"github.com/KlementevTech/gotips/internal/service"
-	"github.com/KlementevTech/gotips/internal/storage/inmemory"
-	"github.com/KlementevTech/gotips/internal/storage/sqlite"
+	"github.com/KlementevTech/gotips/internal/storage/cache/pcpart"
+	"github.com/KlementevTech/gotips/internal/storage/postgres"
 	"github.com/KlementevTech/gotips/internal/transport/grpc"
+	"github.com/KlementevTech/gotips/pkg/log"
 	"golang.org/x/sync/errgroup"
 )
 
-func Run(app, version, cfgPath string) error {
-	changeLvl := defaultJSONLogger(app, version)
+func Run(version, cfgPath string) error {
+	ctx := context.Background()
+	setLevel := log.SetupJSONLog(log.WithVersion(version))
 
 	cfg, err := config.LoadFromFile(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	err = changeLvl(cfg.Logger.Level)
+	err = setLevel(cfg.Logger.Level)
 	if err != nil {
-		return fmt.Errorf("failed to change log level: %w", err)
+		return fmt.Errorf("failed to set log level: %w", err)
 	}
 
-	ctx, cancel := waitForSignal(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := waitForSignal(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	db, closeDB, err := sqlite.NewDB(ctx, cfg.SQLite)
+	pgPool, closePgPool, err := postgres.NewPool(ctx, &cfg.Postgres)
 	if err != nil {
-		return fmt.Errorf("init sqlite: %w", err)
+		return fmt.Errorf("create postgres pool: %w", err)
 	}
-	defer closeDB()
+	defer closePgPool()
 
-	pcPartsRepo := inmemory.NewPcPartCache(sqlite.NewPcPartStorage(db), cfg.Cache.Size, cfg.Cache.TTL)
-	pcPartService := service.NewPcPartService(pcPartsRepo)
-	pcPartHandler := catalogv1.NewPcPartStoreHandler(pcPartService)
+	pgStorage := postgres.NewStorage(pgPool)
+	pcPartCache := pcpart.NewLRUCache(pgStorage, &pcpart.LRUCacheConfig{
+		Size:    cfg.Cache.Size,
+		TTL:     cfg.Cache.TTL,
+		Timeout: cfg.Cache.Timeout,
+	})
+
+	pcPartStoreService := service.NewPcPartStoreService(pcPartCache)
+
+	pcPartHandler := catalogv1.NewPcPartStoreHandler(pcPartStoreService)
+
+	slog.Default().InfoContext(ctx, "service initialized, starting servers", "config", cfgPath)
 
 	g, gCtx := errgroup.WithContext(ctx)
 

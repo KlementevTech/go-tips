@@ -32,5 +32,7 @@ VOLUME ["/data/gotips"]
 
 USER gotips
 
+EXPOSE 50051 6060
+
 ENTRYPOINT ["/bin/gotips"]
 CMD ["-c", "/etc/gotips/config.toml"]

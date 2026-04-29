@@ -3,7 +3,7 @@ package v1
 import (
 	"context"
 
-	pb "github.com/KlementevTech/gotips/api/gen/pb/catalog/v1"
+	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
 	"github.com/KlementevTech/gotips/internal/service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -11,17 +11,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ pb.PcPartServiceServer = (*pcPartStoreHandler)(nil)
+var _ pb.PcPartStoreServiceServer = (*pcPartStoreHandler)(nil)
 
 type pcPartStoreHandler struct {
-	pb.UnimplementedPcPartServiceServer
+	pb.UnimplementedPcPartStoreServiceServer
 
-	service *service.PcPartService
+	pcPartsStoreService *service.PcPartStoreService
 }
 
-func NewPcPartStoreHandler(uc *service.PcPartService) pb.PcPartServiceServer {
+func NewPcPartStoreHandler(
+	pcPartsStoreService *service.PcPartStoreService,
+) pb.PcPartStoreServiceServer {
 	return &pcPartStoreHandler{
-		service: uc,
+		pcPartsStoreService: pcPartsStoreService,
 	}
 }
 
@@ -43,13 +45,13 @@ func (s *pcPartStoreHandler) CreatePcPart(
 		Name: req.GetName(),
 	}
 
-	mdl, err := s.service.Create(ctx, params)
+	part, err := s.pcPartsStoreService.Create(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.CreatePcPartResponse{
-		PcPart: toPcPartPb(mdl),
+		PcPart: toPcPartPb(part),
 	}, nil
 }
 
@@ -62,13 +64,13 @@ func (s *pcPartStoreHandler) GetPcPart(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id: %s", req.GetId())
 	}
 
-	mdl, err := s.service.GetByID(ctx, id)
+	part, err := s.pcPartsStoreService.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.GetPcPartResponse{
-		PcPart: toPcPartPb(mdl),
+		PcPart: toPcPartPb(part),
 	}, nil
 }
 
@@ -76,32 +78,28 @@ func (s *pcPartStoreHandler) UpdatePcPart(
 	ctx context.Context,
 	req *pb.UpdatePcPartRequest,
 ) (*pb.UpdatePcPartResponse, error) {
-	id, err := uuid.Parse(req.GetPcPart().GetId())
+	id, err := uuid.Parse(req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id: %s", req.GetPcPart().GetId())
+		return nil, status.Errorf(codes.InvalidArgument, "invalid id: %s", req.GetId())
 	}
 
-	if req.GetPcPart().GetName() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid name: %s", req.GetPcPart().GetName())
-	}
+	version := fromVersionPb(req.GetVersion())
 
-	version := fromVersionPb(req.GetPcPart().GetVersion())
-
-	var params service.UpdatePcPartParams
+	var params service.UpdatePcPartFields
 
 	for _, p := range req.GetUpdateMask().GetPaths() {
 		if p == "name" {
-			params.Name = req.GetPcPart().GetName()
+			params.Name = req.GetName()
 		}
 	}
 
-	mdl, err := s.service.Update(ctx, id, version, params)
+	part, err := s.pcPartsStoreService.Update(ctx, id, version, params)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.UpdatePcPartResponse{
-		PcPart: toPcPartPb(mdl),
+		PcPart: toPcPartPb(part),
 	}, nil
 }
 
@@ -114,17 +112,38 @@ func (s *pcPartStoreHandler) DeletePcPart(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id: %s", req.GetId())
 	}
 
-	err = s.service.SoftDelete(ctx, id, fromVersionPb(req.GetVersion()))
+	part, err := s.pcPartsStoreService.SoftDelete(ctx, id, fromVersionPb(req.GetVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.DeletePcPartResponse{}, nil
+	return &pb.DeletePcPartResponse{
+		PcPart: toPcPartPb(part),
+	}, nil
 }
 
-func RegisterHandlersFunc(handler pb.PcPartServiceServer) func(s *grpc.Server) error {
+func (s *pcPartStoreHandler) GetPcPartsRecent(
+	ctx context.Context,
+	req *pb.GetPcPartsRecentRequest,
+) (*pb.GetPcPartsRecentResponse, error) {
+	limit := int32(req.GetLimit().Number())
+	if limit == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid limit: %d", req.GetLimit().Number())
+	}
+
+	res, err := s.pcPartsStoreService.GetPcPartsRecent(ctx, limit)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "unable to get pc parts recent: %s", err)
+	}
+
+	return &pb.GetPcPartsRecentResponse{
+		Items: toPcPartsPb(res),
+	}, nil
+}
+
+func RegisterHandlersFunc(handler pb.PcPartStoreServiceServer) func(s *grpc.Server) error {
 	return func(s *grpc.Server) error {
-		pb.RegisterPcPartServiceServer(s, handler)
+		pb.RegisterPcPartStoreServiceServer(s, handler)
 		return nil
 	}
 }

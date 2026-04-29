@@ -8,6 +8,7 @@ import (
 
 type PcPart struct {
 	ID        uuid.UUID
+	IDString  string
 	Name      string
 	Version   int
 	CreatedAt time.Time
@@ -19,10 +20,11 @@ type NewPcPartFields struct {
 	Name string
 }
 
-func NewPcPart(fields NewPcPartFields) *PcPart {
+func CreatePcPart(id uuid.UUID, name string) *PcPart {
 	return &PcPart{
-		ID:        fields.ID,
-		Name:      fields.Name,
+		ID:        id,
+		IDString:  id.String(),
+		Name:      name,
 		CreatedAt: time.Now().UTC(),
 	}
 }
@@ -42,4 +44,8 @@ func (m *PcPart) MarkAsDeleted() {
 
 func (m *PcPart) IsDeleted() bool {
 	return m.DeletedAt != nil
+}
+
+func (m *PcPart) VersionConflict(version int) bool {
+	return m.Version != version
 }

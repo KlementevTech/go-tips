@@ -13,6 +13,8 @@ import (
 type Querier interface {
 	CreatePcPart(ctx context.Context, arg CreatePcPartParams) (PcPart, error)
 	GetPcPart(ctx context.Context, id uuid.UUID) (PcPart, error)
+	GetPcPartsRecent(ctx context.Context, lim int32) ([]PcPart, error)
+	SoftDeletePcPart(ctx context.Context, arg SoftDeletePcPartParams) (PcPart, error)
 	UpdatePcPart(ctx context.Context, arg UpdatePcPartParams) (PcPart, error)
 }
 

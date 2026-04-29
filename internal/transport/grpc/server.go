@@ -52,12 +52,10 @@ func RunServer(ctx context.Context, cfg Config, register func(s *grpc.Server) er
 
 	if cfg.EnableHealth {
 		registerHealthServer(srv)
-		slog.Default().InfoContext(ctx, "gRPC health checking enabled")
 	}
 
 	if cfg.EnableReflection {
 		reflection.Register(srv)
-		slog.Default().InfoContext(ctx, "gRPC server reflection enabled")
 	}
 
 	err := register(srv)
@@ -71,12 +69,17 @@ func RunServer(ctx context.Context, cfg Config, register func(s *grpc.Server) er
 		return fmt.Errorf("listen gRPC: %w", err)
 	}
 
-	slog.Default().InfoContext(ctx, "gRPC server is listening", slog.String("address", lis.Addr().String()))
-
 	errCh := make(chan error, 1)
 
 	go func() {
 		defer close(errCh)
+
+		slog.Default().InfoContext(ctx, "starting gRPC server",
+			slog.String("address", cfg.Address),
+			slog.Bool("reflection", cfg.EnableReflection),
+			slog.Bool("health_check", cfg.EnableHealth),
+		)
+
 		err = srv.Serve(lis)
 		if err != nil {
 			errCh <- fmt.Errorf("serve gRPC server: %w", err)
@@ -93,7 +96,6 @@ func RunServer(ctx context.Context, cfg Config, register func(s *grpc.Server) er
 		default:
 		}
 
-		slog.Default().InfoContext(ctx, "shutting down gRPC server")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
 
