@@ -35,8 +35,13 @@ func LoadFromFile(path string) (*Config, error) {
 		return nil, errors.New("config file path is required")
 	}
 
-	slog.Default().Info("loading config from file", "path", path)
-	return loadFromFile[Config](path, "")
+	cfg, err := loadFromFile[Config](path, "")
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Default().Info("config loaded", "config", path)
+	return cfg, nil
 }
 
 func loadFromFile[T any](path, envPrefix string) (*T, error) {
