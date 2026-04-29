@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	app     = "go-tips"
+	app     = "gotips"
 	version = "unknown"
 	config  string
 )
