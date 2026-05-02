@@ -8,7 +8,6 @@ import (
 
 	"github.com/KlementevTech/gotips/internal/pprof"
 	"github.com/KlementevTech/gotips/internal/storage/postgres"
-	"github.com/KlementevTech/gotips/internal/storage/sqlite"
 	"github.com/KlementevTech/gotips/internal/transport/grpc"
 	"github.com/spf13/viper"
 )
@@ -26,7 +25,6 @@ type Cache struct {
 type Config struct {
 	GRPC     grpc.Config     `mapstructure:"grpc"`
 	Postgres postgres.Config `mapstructure:"postgres"`
-	SQLite   sqlite.Config   `mapstructure:"sqlite"`
 	Cache    Cache           `mapstructure:"cache"`
 	Logger   Logger          `mapstructure:"logger"`
 	Pprof    pprof.Config    `mapstructure:"pprof"`
