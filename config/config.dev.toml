@@ -21,6 +21,7 @@ health_check_period = "1m"
 size = 1000
 ttl = "1s"
 timeout = "3s"
+shards = 64
 
 [pprof]
 address = ":6060"

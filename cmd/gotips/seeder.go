@@ -2,60 +2,50 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
-	"github.com/KlementevTech/gotips/pkg/log"
+	"github.com/KlementevTech/gotips/internal/config"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/spf13/cobra"
 )
 
 var (
 	seedsCount    = 1_000
 	maxSeedsCount = 100_000
-	seedsChanLen  = 100
+	chanLen       = 100
 	minVersion    = 1
 	maxVersion    = 5
 )
 
-func main() {
-	ctx := context.Background()
-	log.SetupJSONLog()
-	dsn, ok := os.LookupEnv("POSTGRES_DSN")
-	if !ok {
-		slog.Default().ErrorContext(ctx, "POSTGRES_DSN env variable not set")
-		os.Exit(1)
+func addSeedsUpCmd(root *cobra.Command) {
+	seedsUpCmd := &cobra.Command{
+		Use:   "seeds-up",
+		Short: "Seeds up",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := context.Background()
+			n, _ := cmd.Flags().GetInt("count")
+			return runSeedsUp(ctx, cfg, n)
+		},
 	}
 
-	var count int
-	flag.IntVar(&count, "n", seedsCount, "number of seeds to generate")
-	flag.Parse()
+	seedsUpCmd.Flags().Int("count", seedsCount, "seeds count")
 
-	if !isValidCount(count) {
-		slog.Default().ErrorContext(ctx, fmt.Sprintf("n must be between 0 and %d", maxSeedsCount))
-		os.Exit(1)
-	}
-
-	err := run(ctx, dsn, count)
-	if err != nil {
-		slog.Default().ErrorContext(ctx, "error running seeder", "error", err)
-		os.Exit(1)
-	}
+	root.AddCommand(seedsUpCmd)
 }
 
-func isValidCount(n int) bool {
-	return n > 0 && n <= maxSeedsCount
-}
+func runSeedsUp(ctx context.Context, cfg *config.Config, count int) error {
+	if err := validateCount(count); err != nil {
+		return err
+	}
 
-func run(ctx context.Context, dsn string, count int) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := pgx.Connect(ctx, cfg.Postgres.DSN)
 	if err != nil {
 		return err
 	}
@@ -70,7 +60,7 @@ func run(ctx context.Context, dsn string, count int) error {
 		createdAt time.Time
 	}
 
-	seedsChan := make(chan Seed, seedsChanLen)
+	seedsChan := make(chan Seed, chanLen)
 
 	slog.Default().InfoContext(ctx, "starting seeder", "count", count)
 	go func() {
@@ -126,4 +116,11 @@ func run(ctx context.Context, dsn string, count int) error {
 
 	slog.Default().InfoContext(ctx, "successfully inserted", "copied", copyCount, "duration", since.String())
 	return nil
+}
+
+func validateCount(n int) error {
+	if n > 0 && n <= maxSeedsCount {
+		return nil
+	}
+	return fmt.Errorf("invalid count: %d", n)
 }

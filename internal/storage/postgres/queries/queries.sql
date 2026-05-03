@@ -1,6 +1,6 @@
 -- name: CreatePcPart :one
-INSERT INTO pc_parts (id, name, version, created_at, deleted_at)
-VALUES (@id, @name, @version, @created_at, @deleted_at)
+INSERT INTO pc_parts (id, name, version, created_at)
+VALUES (@id, @name, 1, now())
 RETURNING *;
 
 -- name: GetPcPart :one
@@ -12,9 +12,8 @@ LIMIT 1;
 -- name: UpdatePcPart :one
 UPDATE pc_parts
 SET name = @name,
-    version = @version,
-    deleted_at = @deleted_at
-WHERE id = @id AND version = @old_version AND deleted_at IS NULL
+    version = version + 1
+WHERE id = @id AND version = @version AND deleted_at IS NULL
 RETURNING *;
 
 -- name: GetPcPartsRecent :many
@@ -26,9 +25,6 @@ LIMIT @lim;
 
 -- name: SoftDeletePcPart :one
 UPDATE pc_parts
-SET version = @version,
-    deleted_at = @deleted_at
-WHERE id = @id AND
-    version = @old_version AND
-    deleted_at IS NULL
-RETURNING *;
+SET version = version + 1,
+    deleted_at = now()
+WHERE id = @id AND version = @version AND deleted_at IS NULL RETURNING *;

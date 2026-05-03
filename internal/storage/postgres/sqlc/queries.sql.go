@@ -7,34 +7,23 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createPcPart = `-- name: CreatePcPart :one
-INSERT INTO pc_parts (id, name, version, created_at, deleted_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO pc_parts (id, name, version, created_at)
+VALUES ($1, $2, 1, now())
 RETURNING id, name, version, created_at, deleted_at
 `
 
 type CreatePcPartParams struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	Version   int64              `json:"version"`
-	CreatedAt time.Time          `json:"created_at"`
-	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 func (q *Queries) CreatePcPart(ctx context.Context, arg CreatePcPartParams) (PcPart, error) {
-	row := q.db.QueryRow(ctx, createPcPart,
-		arg.ID,
-		arg.Name,
-		arg.Version,
-		arg.CreatedAt,
-		arg.DeletedAt,
-	)
+	row := q.db.QueryRow(ctx, createPcPart, arg.ID, arg.Name)
 	var i PcPart
 	err := row.Scan(
 		&i.ID,
@@ -102,28 +91,18 @@ func (q *Queries) GetPcPartsRecent(ctx context.Context, lim int32) ([]PcPart, er
 
 const softDeletePcPart = `-- name: SoftDeletePcPart :one
 UPDATE pc_parts
-SET version = $1,
-    deleted_at = $2
-WHERE id = $3 AND
-    version = $4 AND
-    deleted_at IS NULL
-RETURNING id, name, version, created_at, deleted_at
+SET version = version + 1,
+    deleted_at = now()
+WHERE id = $1 AND version = $2 AND deleted_at IS NULL RETURNING id, name, version, created_at, deleted_at
 `
 
 type SoftDeletePcPartParams struct {
-	Version    int64              `json:"version"`
-	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
-	ID         uuid.UUID          `json:"id"`
-	OldVersion int64              `json:"old_version"`
+	ID      uuid.UUID `json:"id"`
+	Version int64     `json:"version"`
 }
 
 func (q *Queries) SoftDeletePcPart(ctx context.Context, arg SoftDeletePcPartParams) (PcPart, error) {
-	row := q.db.QueryRow(ctx, softDeletePcPart,
-		arg.Version,
-		arg.DeletedAt,
-		arg.ID,
-		arg.OldVersion,
-	)
+	row := q.db.QueryRow(ctx, softDeletePcPart, arg.ID, arg.Version)
 	var i PcPart
 	err := row.Scan(
 		&i.ID,
@@ -138,28 +117,19 @@ func (q *Queries) SoftDeletePcPart(ctx context.Context, arg SoftDeletePcPartPara
 const updatePcPart = `-- name: UpdatePcPart :one
 UPDATE pc_parts
 SET name = $1,
-    version = $2,
-    deleted_at = $3
-WHERE id = $4 AND version = $5 AND deleted_at IS NULL
+    version = version + 1
+WHERE id = $2 AND version = $3 AND deleted_at IS NULL
 RETURNING id, name, version, created_at, deleted_at
 `
 
 type UpdatePcPartParams struct {
-	Name       string             `json:"name"`
-	Version    int64              `json:"version"`
-	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
-	ID         uuid.UUID          `json:"id"`
-	OldVersion int64              `json:"old_version"`
+	Name    string    `json:"name"`
+	ID      uuid.UUID `json:"id"`
+	Version int64     `json:"version"`
 }
 
 func (q *Queries) UpdatePcPart(ctx context.Context, arg UpdatePcPartParams) (PcPart, error) {
-	row := q.db.QueryRow(ctx, updatePcPart,
-		arg.Name,
-		arg.Version,
-		arg.DeletedAt,
-		arg.ID,
-		arg.OldVersion,
-	)
+	row := q.db.QueryRow(ctx, updatePcPart, arg.Name, arg.ID, arg.Version)
 	var i PcPart
 	err := row.Scan(
 		&i.ID,

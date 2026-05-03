@@ -24,24 +24,21 @@ func NewStorage(pool *pgxpool.Pool) *Storage {
 	}
 }
 
-func (s *Storage) CreatePcPart(ctx context.Context, part *domain.PcPart) error {
+func (s *Storage) CreatePcPart(ctx context.Context, params domain.CreatePcPartParams) (*domain.PcPart, error) {
 	const op = "postgres.CreatePcPart"
 
 	row, err := s.db(ctx).CreatePcPart(ctx, sqlc.CreatePcPartParams{
-		ID:        part.ID,
-		Name:      part.Name,
-		Version:   1,
-		CreatedAt: part.CreatedAt,
+		ID:   params.ID,
+		Name: params.Name,
 	})
 	if err != nil {
 		if isAlreadyExists(err) {
-			return domain.ErrAlreadyExists
+			return nil, domain.ErrAlreadyExists
 		}
-		return fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	*part = *toPcPart(row)
-	return nil
+	return toPcPart(row), nil
 }
 
 const pgAlreadyExistsCode = "23505"
@@ -54,7 +51,7 @@ func isAlreadyExists(err error) bool {
 }
 
 func (s *Storage) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcPart, error) {
-	const op = "postgres.GetPcPartsRecent"
+	const op = "postgres.GetPcPartByID"
 
 	row, err := s.db(ctx).GetPcPart(ctx, id)
 	if err != nil {
@@ -67,24 +64,22 @@ func (s *Storage) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcPa
 	return toPcPart(row), nil
 }
 
-func (s *Storage) UpdatePcPart(ctx context.Context, part *domain.PcPart) error {
+func (s *Storage) UpdatePcPart(ctx context.Context, params domain.UpdatePcPartParams) (*domain.PcPart, error) {
 	const op = "postgres.UpdatePcPart"
 
 	row, err := s.db(ctx).UpdatePcPart(ctx, sqlc.UpdatePcPartParams{
-		ID:         part.ID,
-		Name:       part.Name,
-		Version:    int64(part.Version + 1),
-		OldVersion: int64(part.Version),
+		ID:      params.ID,
+		Version: int64(params.Version),
+		Name:    params.Name,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.ErrPreconditionFailed
+			return nil, domain.ErrPreconditionFailed
 		}
-		return fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	*part = *toPcPart(row)
-	return nil
+	return toPcPart(row), nil
 }
 
 func (s *Storage) GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain.PcPart, error) {
@@ -98,24 +93,21 @@ func (s *Storage) GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain.
 	return toPcParts(rows), nil
 }
 
-func (s *Storage) SoftDeletePcPart(ctx context.Context, part *domain.PcPart) error {
+func (s *Storage) SoftDeletePcPart(ctx context.Context, id uuid.UUID, version int) (*domain.PcPart, error) {
 	const op = "postgres.SoftDeletePcPart"
 
 	row, err := s.db(ctx).SoftDeletePcPart(ctx, sqlc.SoftDeletePcPartParams{
-		ID:         part.ID,
-		DeletedAt:  fromTimePtr(part.DeletedAt),
-		Version:    int64(part.Version + 1),
-		OldVersion: int64(part.Version),
+		ID:      id,
+		Version: int64(version),
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.ErrPreconditionFailed
+			return nil, domain.ErrPreconditionFailed
 		}
-		return fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	*part = *toPcPart(row)
-	return nil
+	return toPcPart(row), nil
 }
 
 func (s *Storage) db(ctx context.Context) *sqlc.Queries {

@@ -19,7 +19,7 @@ type Config struct {
 	AppName           string        `mapstructure:"app_name"`
 }
 
-func NewPool(ctx context.Context, cfg *Config) (*pgxpool.Pool, func(), error) {
+func NewPool(ctx context.Context, cfg Config) (*pgxpool.Pool, func(), error) {
 	dbConfig, err := pgxpool.ParseConfig(cfg.DSN)
 	if err != nil {
 		return nil, nil, err

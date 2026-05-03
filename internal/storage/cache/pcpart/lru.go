@@ -8,55 +8,65 @@ import (
 	"github.com/KlementevTech/gotips/internal/domain"
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/valyala/fastrand"
 	"golang.org/x/sync/singleflight"
 )
 
-type pcPartRepository interface {
-	CreatePcPart(ctx context.Context, part *domain.PcPart) error
-	GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcPart, error)
-	GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain.PcPart, error)
-	UpdatePcPart(ctx context.Context, part *domain.PcPart) error
-	SoftDeletePcPart(ctx context.Context, part *domain.PcPart) error
+type shard struct {
+	recent *expirable.LRU[string, []*domain.PcPart]
+	items  *expirable.LRU[string, *domain.PcPart]
 }
 
 type LRUCache struct {
-	storage pcPartRepository
-	recent  *expirable.LRU[string, []*domain.PcPart]
-	inner   *expirable.LRU[string, *domain.PcPart]
-	sfg     singleflight.Group
-	timeout time.Duration
+	shardsCount uint32
+	shards      []*shard
+	sfg         singleflight.Group
+	storage     domain.Repository
+	timeout     time.Duration
 }
 
 type LRUCacheConfig struct {
 	Size    int
 	TTL     time.Duration
 	Timeout time.Duration
+	Shards  uint32
 }
 
-func NewLRUCache(storage pcPartRepository, cfg *LRUCacheConfig) *LRUCache {
-	const recentSize = 10
+func NewLRUCache(storage domain.Repository, cfg *LRUCacheConfig) *LRUCache {
+	const recentsCnt = 5
+
+	shards := make([]*shard, cfg.Shards)
+	for i := range shards {
+		shards[i] = &shard{
+			recent: expirable.NewLRU[string, []*domain.PcPart](recentsCnt, nil, cfg.TTL),
+			items:  expirable.NewLRU[string, *domain.PcPart](cfg.Size, nil, cfg.TTL),
+		}
+	}
+
 	return &LRUCache{
-		storage: storage,
-		recent:  expirable.NewLRU[string, []*domain.PcPart](recentSize, nil, cfg.TTL),
-		inner:   expirable.NewLRU[string, *domain.PcPart](cfg.Size, nil, cfg.TTL),
-		timeout: cfg.Timeout,
+		storage:     storage,
+		shardsCount: cfg.Shards,
+		shards:      shards,
+		timeout:     cfg.Timeout,
 	}
 }
 
-func (c *LRUCache) CreatePcPart(ctx context.Context, part *domain.PcPart) error {
-	return c.storage.CreatePcPart(ctx, part)
+func (c *LRUCache) CreatePcPart(ctx context.Context, params domain.CreatePcPartParams) (*domain.PcPart, error) {
+	return c.storage.CreatePcPart(ctx, params)
 }
 
 func (c *LRUCache) GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain.PcPart, error) {
 	const op = "cache.GetPcPartsRecent"
 	key := fmt.Sprintf("recent:%d", limit)
 
-	if cached, ok := c.recent.Get(key); ok {
+	shrd := c.shards[fastrand.Uint32n(c.shardsCount)]
+
+	if cached, ok := shrd.recent.Get(key); ok {
 		return cached, nil
 	}
 
 	data, err, _ := c.sfg.Do(key, func() (any, error) {
-		if cached, ok := c.recent.Get(key); ok {
+		if cached, ok := shrd.recent.Get(key); ok {
 			return cached, nil
 		}
 
@@ -72,7 +82,7 @@ func (c *LRUCache) GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain
 			return nil, err
 		}
 
-		c.recent.Add(key, fetched)
+		shrd.recent.Add(key, fetched)
 		return fetched, nil
 	})
 	if err != nil {
@@ -92,14 +102,17 @@ func (c *LRUCache) GetPcPartsRecent(ctx context.Context, limit int32) ([]*domain
 
 func (c *LRUCache) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcPart, error) {
 	const op = "cache.GetPcPartByID"
-	key := fmt.Sprintf("id:%s", id)
+	key := fmt.Sprintf("id:%d", id.ID())
 
-	if cached, ok := c.inner.Get(key); ok {
+	// Если c.shardsCount - степень 2, то % можно заменить на сдвиг
+	shrd := c.shards[id.ID()&(c.shardsCount-1)]
+
+	if cached, ok := shrd.items.Get(key); ok {
 		return cached, nil
 	}
 
 	data, err, _ := c.sfg.Do(key, func() (any, error) {
-		if cached, ok := c.inner.Get(key); ok {
+		if cached, ok := shrd.items.Get(key); ok {
 			return cached, nil
 		}
 
@@ -112,7 +125,7 @@ func (c *LRUCache) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcP
 			return nil, err
 		}
 
-		c.inner.Add(key, fetched)
+		shrd.items.Add(key, fetched)
 		return fetched, nil
 	})
 	if err != nil {
@@ -130,10 +143,10 @@ func (c *LRUCache) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcP
 	return res, nil
 }
 
-func (c *LRUCache) UpdatePcPart(ctx context.Context, part *domain.PcPart) error {
-	return c.storage.UpdatePcPart(ctx, part)
+func (c *LRUCache) UpdatePcPart(ctx context.Context, params domain.UpdatePcPartParams) (*domain.PcPart, error) {
+	return c.storage.UpdatePcPart(ctx, params)
 }
 
-func (c *LRUCache) SoftDeletePcPart(ctx context.Context, part *domain.PcPart) error {
-	return c.storage.SoftDeletePcPart(ctx, part)
+func (c *LRUCache) SoftDeletePcPart(ctx context.Context, id uuid.UUID, version int) (*domain.PcPart, error) {
+	return c.storage.SoftDeletePcPart(ctx, id, version)
 }

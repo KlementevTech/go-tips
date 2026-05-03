@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux \
     go build \
     -ldflags="-X main.version=${VERSION} -s -w" \
     -o /tmp/gotips \
-    ./cmd/server
+    ./cmd/gotips
 
 FROM alpine:${ALPINE_VERSION}
 

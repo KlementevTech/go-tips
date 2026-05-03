@@ -20,6 +20,7 @@ type Cache struct {
 	Size    int           `mapstructure:"size"`
 	TTL     time.Duration `mapstructure:"ttl"`
 	Timeout time.Duration `mapstructure:"timeout"`
+	Shards  uint32        `mapstructure:"shards"`
 }
 
 type Config struct {

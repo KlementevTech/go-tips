@@ -37,14 +37,3 @@ func toTimePtr(t pgtype.Timestamptz) *time.Time {
 	}
 	return nil
 }
-
-func fromTimePtr(t *time.Time) pgtype.Timestamptz {
-	if t == nil {
-		return pgtype.Timestamptz{}
-	}
-
-	return pgtype.Timestamptz{
-		Time:  *t,
-		Valid: true,
-	}
-}

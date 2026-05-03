@@ -31,7 +31,7 @@ jobs:
           version: v2.11.4
 
       - name: Build
-        run: go build -v ./cmd/server
+        run: go build -v ./cmd/gotips
 
       - name: Test with Coverage
         run: go test -v -race -coverprofile=coverage.out ./...

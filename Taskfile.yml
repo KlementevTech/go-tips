@@ -107,6 +107,10 @@ tasks:
         silent: true
       - task: mod:tidy
 
+      #- cmd: echo "Сборка образа Docker..."
+      #  silent: true
+      #- task: docker:build
+
       - cmd: echo "[OK] Все проверки пройдены."
         silent: true
 
@@ -196,7 +200,7 @@ tasks:
     env:
       POSTGRES_DSN: "{{.POSTGRES_DSN}}"
     cmds:
-      - go run ./cmd/seeder/main.go
+      - go run ./cmd/gotips seeds-up
 
   install:tools:
     desc: "Установка dev инструментов"
