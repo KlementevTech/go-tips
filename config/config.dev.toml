@@ -8,16 +8,20 @@ max_send_msg_size = 8_388_608
 max_connection_idle = "5m"
 max_connection_age = "10m"
 
-[sqlite]
-db_file = "/data/gotips/gotips.db"
-max_open_conns = 25
-max_idle_conns = 25
-conn_max_lifetime = "5m"
-connect_timeout = "5s"
+[postgres]
+app_name = "gotips"
+dsn = "postgres://gotips:gotips@gotips-dev-postgres:5432/gotips?sslmode=disable"
+conn_timeout = "5s"
+max_conns = 25
+min_idle_conns = 5
+max_conn_lifetime = "30m"
+health_check_period = "1m"
 
 [cache]
 size = 1000
 ttl = "1s"
+timeout = "3s"
+shards = 64
 
 [pprof]
 address = ":6060"

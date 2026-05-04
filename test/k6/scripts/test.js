@@ -6,8 +6,8 @@ const DURATION = __ENV.DURATION || "1m";
 const VUS = parseInt(__ENV.VUS) || 500;
 
 const client = new grpc.Client();
-client.load(['/proto'], 'catalog/v1/pcpart.proto');
-client.load(['/proto'], 'catalog/v1/pcpart_service.proto');
+client.load(['/proto'], 'gotips/v1/pcpart.proto');
+client.load(['/proto'], 'gotips/v1/pcpart_store_service.proto');
 
 export const options = {
     stages: [
@@ -34,9 +34,12 @@ export default () => {
         connected = true;
     }
 
-    const response = client.invoke('catalog.v1.PcPartService/GetPcPart', {
+    /*
+    const response = client.invoke('gotips.v1.PcPartStoreService/GetPcPart', {
         "id": "019d5da1-46dd-7b0d-82e5-49345ac87e79"
     });
+     */
+    const response = client.invoke('gotips.v1.PcPartStoreService/GetPcPartsRecent', {"limit": "LIMIT_SMALL"});
 
     check(response, {
         'status is OK': (r) => r && r.status === grpc.StatusOK,

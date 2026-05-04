@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package gotips.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1;gotipsv1";
+
+message PcPart {
+  string id = 1;
+  string name = 3;
+  int64 version = 5;
+  google.protobuf.Timestamp created_at = 6;
+  optional google.protobuf.Timestamp deleted_at = 8;
+}

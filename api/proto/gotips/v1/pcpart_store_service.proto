@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package gotips.v1;
+
+import "google/protobuf/field_mask.proto";
+import "gotips/v1/pcpart.proto";
+
+option go_package = "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1;gotipsv1";
+
+service PcPartStoreService {
+  rpc CreatePcPart(CreatePcPartRequest) returns (CreatePcPartResponse);
+  rpc GetPcPart(GetPcPartRequest) returns (GetPcPartResponse);
+  rpc GetPcPartsRecent(GetPcPartsRecentRequest) returns (GetPcPartsRecentResponse);
+  rpc UpdatePcPart(UpdatePcPartRequest) returns (UpdatePcPartResponse);
+  rpc DeletePcPart(DeletePcPartRequest) returns (DeletePcPartResponse);
+}
+
+message CreatePcPartRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message CreatePcPartResponse {
+  PcPart pc_part = 1;
+}
+
+message GetPcPartRequest {
+  string id = 1;
+}
+
+message GetPcPartResponse {
+  PcPart pc_part = 1;
+}
+
+message GetPcPartsRecentRequest {
+  enum Limit {
+    LIMIT_UNSPECIFIED = 0;
+    LIMIT_SMALL = 20;
+    LIMIT_MEDIUM = 40;
+    LIMIT_LARGE = 80;
+  }
+
+  Limit limit = 1;
+}
+
+message GetPcPartsRecentResponse {
+  repeated PcPart items = 1;
+}
+
+message UpdatePcPartRequest {
+  string id = 1;
+  int64 version = 2;
+  string name = 3;
+  google.protobuf.FieldMask update_mask = 4;
+}
+
+message UpdatePcPartResponse {
+  PcPart pc_part = 1;
+}
+
+message DeletePcPartRequest {
+  string id = 1;
+  int64 version = 2;
+}
+
+message DeletePcPartResponse {
+  PcPart pc_part = 1;
+}

@@ -1,0 +1,44 @@
+name: gotips-perf
+
+services:
+  app:
+    image: klementevtech/gotips:latest
+    container_name: gotips-perf-app
+    ports:
+      - "50051:50051"
+      - "6060:6060"
+    volumes:
+      - ./../../config/config.dev.toml:/etc/gotips/config.toml:ro
+      - ./../../sqlite3/data:/data/gotips:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '1.0'
+          memory: 256M
+    environment:
+      - GOMAXPROCS=2
+    networks:
+      - gotips_net
+
+  k6:
+    image: grafana/k6:latest
+    container_name: gotips-perf-k6
+    command: run /scripts/test.js
+    volumes:
+      - ./../../api/proto:/proto
+      - ./../../test/k6/scripts:/scripts
+    depends_on:
+      - app
+    networks:
+      - gotips_net
+
+volumes:
+  postgres_data:
+
+networks:
+  gotips_net:
+    external: true
+    name: gotips-shared-network

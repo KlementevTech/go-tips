@@ -8,13 +8,19 @@ vars:
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "unknown"
 
-  IMAGE: '{{.NAMESPACE}}/{{.APP}}'
-  IMAGE_TAGGED: '{{.IMAGE}}:{{.VERSION}}'
-  IMAGE_LATEST: '{{.IMAGE}}:latest'
+  DOCKER_IMAGE: '{{.NAMESPACE}}/{{.APP}}'
+  DOCKER_IMAGE_TAGGED: '{{.DOCKER_IMAGE}}:{{.VERSION}}'
+  DOCKER_IMAGE_LATEST: '{{.DOCKER_IMAGE}}:latest'
 
-  DB_DRIVER: sqlite3
-  DB_NAME: 'sqlite3/data/gotips.db'
-  MIGRATIONS_DIR: 'migrations/schema'
+  POSTGRES_USER: gotips
+  POSTGRES_PASSWORD: gotips
+  POSTGRES_DB: gotips
+  POSTGRES_DSN: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@localhost:5432/{{.POSTGRES_DB}}?sslmode=disable'
+  POSTGRES_DRIVER: pgx
+  POSTGRES_MIGRATIONS: 'migrations/postgres'
+
+  PPROF_ADDR: 'localhost:6060'
+  PPROF_OUT_DIR: 'pprof_data'
 
   GOLANGCI_VERSION: v2.11.4
   BUF_VERSION: v1.68.4
@@ -26,18 +32,114 @@ tasks:
       - task --list
     silent: true
 
-  build:
+  lint:check:
+    desc: "Проверка линтером"
+    cmds:
+      - golangci-lint run ./...
+
+  lint:fix:
+    desc: "Форматирование линтером"
+    cmds:
+      - golangci-lint run --fix
+
+  lint:format:
+    desc: "Форматирование"
+    cmds:
+      - gofumpt -l -w .
+
+  test:run:
+    desc: "Запуск тестов"
+    cmds:
+      - go test -v ./...
+
+  test:perf:
+    desc: "Запускает нагрузочный тест"
+    cmds:
+      - |
+        docker compose -f test/k6/compose.perf.yaml \
+          up \
+          --abort-on-container-exit \
+          --exit-code-from k6 \
+          --attach k6
+
+  test:perf:local:
+    desc: "Запускает ghz нагрузочный тест"
+    cmds:
+      - |
+        ghz --insecure \
+          -i $(pwd)/api/proto \
+          --proto $(pwd)/api/proto/gotips/v1/pcpart_store_service.proto \
+          --call gotips.v1.PcPartStoreService/GetPcPartsRecent \
+          -d '{"limit": "LIMIT_SMALL"}' \
+          -n 1000000 \
+          -c 500 \
+          127.0.0.1:50051
+
+  mod:tidy:
+    desc: "Очистка зависимостей"
+    cmds:
+      - go mod tidy
+
+  git:pre-commit:
+    desc: "Запуск проверок перед коммитом"
+    cmds:
+      - cmd: echo "Форматирование..."
+        silent: true
+      - task: lint:format
+
+      - cmd: echo "Форматирование линтером..."
+        silent: true
+      - task: lint:fix
+
+      - cmd: echo "Проверка линтером..."
+        silent: true
+      - task: lint:check
+
+      - cmd: echo "Проверка proto файлов..."
+        silent: true
+      - task: proto:lint
+
+      - cmd: echo "Запуск тестов..."
+        silent: true
+      - task: test:run
+
+      - cmd: echo "Очистка зависимостей..."
+        silent: true
+      - task: mod:tidy
+
+      #- cmd: echo "Сборка образа Docker..."
+      #  silent: true
+      #- task: docker:build
+
+      - cmd: echo "[OK] Все проверки пройдены."
+        silent: true
+
+  proto:gen:
+    desc: "Генерирует protobuf файлы"
+    cmds:
+      - buf generate
+
+  proto:lint:
+    desc: "Проверка proto файлов"
+    cmds:
+      - buf lint
+
+  proto:lint:changes:
+    desc: "Проверка обратной совместимости proto файлов"
+    cmds:
+      - buf breaking --against ".git#branch=main"
+
+  docker:build:
     desc: "Собирает Docker образ"
     cmds:
       - |
         docker build \
-          -f $(pwd)/docker/Dockerfile \
           --build-arg VERSION={{.VERSION}} \
-          -t "{{.IMAGE_TAGGED}}" \
-          -t "{{.IMAGE_LATEST}}" \
+          -t "{{.DOCKER_IMAGE_TAGGED}}" \
+          -t "{{.DOCKER_IMAGE_LATEST}}" \
           .
 
-  run:
+  docker:run:
     desc: "Запуск Docker образа"
     cmds:
       - |
@@ -46,130 +148,61 @@ tasks:
           -p 50051:50051 \
           -p 6060:6060 \
           -v config/config.dev.toml:/etc/gotips/config.toml:ro \
-          -v sqlite3/data:/data/gotips:rw \
           klementevtech/gotips:latest
 
-  lint:
-    desc: "Проверка линтером"
-    cmds:
-      - golangci-lint run ./...
-
-  lint-fix:
-    desc: "Форматирование линтером"
-    cmds:
-      - golangci-lint run --fix
-
-  format:
-    desc: "Форматирование"
-    cmds:
-      - gofumpt -l -w .
-
-  test:
-    desc: "Запуск тестов"
-    cmds:
-      - go test -v ./...
-
-  tidy:
-    desc: "Очистка зависимостей"
-    cmds:
-      - go mod tidy
-
-  pre-commit:
-    desc: "Запуск проверок перед коммитом"
-    cmds:
-      - cmd: echo "Форматирование..."
-        silent: true
-      - task: format
-
-      - cmd: echo "Форматирование линтером..."
-        silent: true
-      - task: lint-fix
-
-      - cmd: echo "Проверка линтером..."
-        silent: true
-      - task: lint
-
-      - cmd: echo "Проверка proto файлов..."
-        silent: true
-      - task: lint-proto
-
-      - cmd: echo "Запуск тестов..."
-        silent: true
-      - task: test
-
-      - cmd: echo "Очистка зависимостей..."
-        silent: true
-      - task: tidy
-
-      - cmd: echo "[OK] Все проверки пройдены."
-        silent: true
-
-  gen-pb:
-    desc: "Генерирует protobuf файлы"
-    cmds:
-      - buf generate
-
-  lint-proto:
-    desc: "Проверка proto файлов"
-    cmds:
-      - buf lint
-
-  lint-proto-changes:
-    desc: "Проверка обратной совместимости proto файлов"
-    cmds:
-      - buf breaking --against ".git#branch=main"
-
-  test-perf:
-    desc: "Запускает нагрузочный тест"
-    cmds:
-      - |
-        docker compose -f test/k6/compose.yaml \
-          up \
-          --abort-on-container-exit \
-          --exit-code-from k6 \
-          --attach k6
-        
-  perf-stats:
+  docker:stats:
     desc: "Выводит статистику Docker"
     cmds:
       - docker stats
 
-  migrate-new:
-    desc: "Создать миграцию. Пример: task migrate-new name=add_parts"
-    vars:
-      NAME: '{{.name | default "migration"}}'
+  compose:up:
+    desc: "Поднимает окружение для разработки"
     cmds:
-      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} create {{.NAME}} sql
-    preconditions:
-      - sh: 'test -n "{{.NAME}}"'
-        msg: "Ошибка: нужно указать имя. Используй: task create-migration name=имя_миграции"
+      - docker compose up -d
 
-  migrate-up:
-    desc: "Накатить миграции SQLite"
-    cmds:
-      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} up
-
-  migrate-down:
-    desc: "Откатить последнюю миграцию"
-    cmds:
-      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} down
-
-  migrate-reset:
-    desc: "Сбросить ВСЮ базу (удалить все таблицы)"
-    cmds:
-      - goose sqlite3 {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} reset
-
-  migrate-status:
-    desc: "Проверить статус миграций"
-    cmds:
-      - goose {{.DB_DRIVER}} {{.DB_NAME}} -dir {{.MIGRATIONS_DIR}} status
-
-  gen-sqlc:
+  sqlc:gen:
     desc: "Кодогенерация sqlc"
     cmds:
       - sqlc generate
 
-  install-tools:
+  migrate:create:
+    desc: "Создать миграцию. Пример: task migrate-create name=add_parts"
+    vars:
+      NAME: '{{.name | default "migration"}}'
+    cmds:
+      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} create {{.NAME}} sql
+    preconditions:
+      - sh: 'test -n "{{.NAME}}"'
+        msg: "Ошибка: нужно указать имя. Используй: task migrate-create name=имя_миграции"
+
+  migrate:status:
+    desc: "Проверить статус миграций, инициализирует goose_db_version таблицу"
+    cmds:
+      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} status
+
+  migrate:up:
+    desc: "Накатить миграции"
+    cmds:
+      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} up
+
+  migrate:down:
+    desc: "Откатить последнюю миграцию"
+    cmds:
+      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} down
+
+  migrate:reset:
+    desc: "Сбросить ВСЮ базу (удалить все таблицы)"
+    cmds:
+      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} reset
+
+  seeds:up:
+    desc: "Наполняет Postgres тестовыми данными"
+    env:
+      POSTGRES_DSN: "{{.POSTGRES_DSN}}"
+    cmds:
+      - go run ./cmd/gotips seeds-up
+
+  install:tools:
     desc: "Установка dev инструментов"
     cmds:
       - cmd: echo "Установка линтера golangci-lint..."
@@ -200,12 +233,70 @@ tasks:
       - cmd: echo "[OK] Все Dev зависимости установлены."
         silent: true
 
-  install-linter:
+  install:linter:
     desc: "Установка golangci-lint"
     cmds:
       - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
 
-  install-grpcurl:
-    desc: "Устанавливает grpcurl"
+  install:grpcurl:
+    desc: "Установка grpcurl"
     cmds:
       - go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
+  install:ghz:
+    desc: "Установка ghz, нагрузочный бенч"
+    cmds:
+      - go install github.com/bojand/ghz/cmd/ghz@latest
+
+  pprof:setup:
+    desc: "Создать директорию для дампов"
+    cmds:
+      - mkdir -p {{.PPROF_OUT_DIR}}
+
+  pprof:open:
+    desc: "Открыть главную страницу pprof в браузере"
+    cmds:
+      - open http://{{.PPROF_ADDR}}/debug/pprof/
+
+  pprof:heap:
+    desc: "Анализ использования кучи (памяти)"
+    cmds:
+      - go tool pprof -http=:8080 {{.PPROF_ADDR}}/debug/pprof/heap
+
+  pprof:cpu:
+    desc: "Профилирование CPU (30 секунд) с сохранением"
+    deps: [ pprof:setup ]
+    cmds:
+      - curl -s "{{.PPROF_ADDR}}/debug/pprof/profile?seconds=30" > {{.PPROF_OUT_DIR}}/cpu.out
+      - go tool pprof -http=:8081 {{.PPROF_OUT_DIR}}/cpu.out
+
+  pprof:allocs:
+    desc: "Анализ аллокаций (где создаются объекты)"
+    cmds:
+      - go tool pprof -http=:8082 {{.PPROF_ADDR}}/debug/pprof/allocs
+
+  pprof:block:
+    desc: "Поиск блокировок (mutex contention)"
+    cmds:
+      - go tool pprof -http=:8083 {{.PPROF_ADDR}}/debug/pprof/block
+
+  pprof:mutex:
+    desc: "Поиск проблем с блокировками (mutex)"
+    cmds:
+      - go tool pprof -http=:8084 {{.PPROF_ADDR}}/debug/pprof/mutex
+
+  pprof:goroutines:
+    desc: "Дамп всех активных горутин (в виде текста для быстрого чека)"
+    deps: [ pprof:setup ]
+    cmds:
+      - curl -s "http://{{.PPROF_ADDR}}/debug/pprof/goroutine?debug=1" > {{.PPROF_OUT_DIR}}/goroutines.txt
+      - echo "Dump saved to {{.PPROF_OUT_DIR}}/goroutines.txt"
+
+  pprof:check-all:
+    desc: "Запустить все основные проверки (сохранение в файлы без UI)"
+    deps: [ pprof:setup ]
+    cmds:
+      - curl -s http://{{.PPROF_ADDR}}/debug/pprof/heap > {{.PPROF_OUT_DIR}}/heap.out
+      - curl -s http://{{.PPROF_ADDR}}/debug/pprof/allocs > {{.PPROF_OUT_DIR}}/allocs.out
+      - curl -s http://{{.PPROF_ADDR}}/debug/pprof/block > {{.PPROF_OUT_DIR}}/block.out
+      - echo "All snapshots saved to {{.PPROF_OUT_DIR}}"

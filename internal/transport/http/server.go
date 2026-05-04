@@ -40,8 +40,6 @@ func RunServer(ctx context.Context, cfg *Config, handler http.Handler) error {
 		return fmt.Errorf("listen http: %w", err)
 	}
 
-	log.InfoContext(ctx, "http server is listening", slog.String("address", lis.Addr().String()))
-
 	httpSrv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
@@ -49,6 +47,7 @@ func RunServer(ctx context.Context, cfg *Config, handler http.Handler) error {
 
 	errChan := make(chan error, 1)
 	go func() {
+		log.InfoContext(ctx, "starting http server", "address", cfg.Addr)
 		serveErr := httpSrv.Serve(lis)
 		if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 			errChan <- fmt.Errorf("serve http server: %w", serveErr)
@@ -59,7 +58,6 @@ func RunServer(ctx context.Context, cfg *Config, handler http.Handler) error {
 	case err = <-errChan:
 		return err
 	case <-ctx.Done():
-		log.InfoContext(ctx, "shutting down http server")
 		err = shutdown(httpSrv, cfg.ShutdownTimeout)
 		if err != nil {
 			log.ErrorContext(ctx, "shutting down http server", slog.String("error", err.Error()))
