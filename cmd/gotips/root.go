@@ -17,8 +17,10 @@ var (
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "gotips",
-		Short: "Go-Tips Service",
+		Use:           "gotips",
+		Short:         "Go-Tips Service",
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			setLevel := log.SetupJSONLog(log.WithVersion(version))
 

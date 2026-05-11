@@ -7,7 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/KlementevTech/gotips/internal/api/middleware/errlog"
+	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
+	"github.com/KlementevTech/gotips/internal/transport/grpc/middleware/errlog"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -27,7 +28,11 @@ type Config struct {
 	EnableHealth      bool          `mapstructure:"enable_health"`
 }
 
-func RunServer(ctx context.Context, cfg Config, register func(s *grpc.Server) error) error {
+func RunServer(
+	ctx context.Context,
+	pcPartStoreService pb.PcPartStoreServiceServer,
+	cfg Config,
+) error {
 	middlewares := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			recovery.UnaryServerInterceptor(),
@@ -58,9 +63,8 @@ func RunServer(ctx context.Context, cfg Config, register func(s *grpc.Server) er
 		reflection.Register(srv)
 	}
 
-	err := register(srv)
-	if err != nil {
-		return fmt.Errorf("register gRPC servers: %w", err)
+	if pcPartStoreService != nil {
+		pb.RegisterPcPartStoreServiceServer(srv, pcPartStoreService)
 	}
 
 	var lc net.ListenConfig

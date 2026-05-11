@@ -18,7 +18,7 @@ func toPcPartPb(m *domain.PcPart) *pb.PcPart {
 	return &pb.PcPart{
 		Id:        m.IDString,
 		Name:      m.Name,
-		Version:   toVersionPb(m.Version),
+		Version:   int64(m.Version),
 		CreatedAt: timestamppb.New(m.CreatedAt),
 		DeletedAt: deletedAt,
 	}
@@ -45,8 +45,4 @@ func toTimestampPb(t *time.Time) *timestamppb.Timestamp {
 
 func fromVersionPb(version int64) int {
 	return int(version)
-}
-
-func toVersionPb(version int) int64 {
-	return int64(version)
 }

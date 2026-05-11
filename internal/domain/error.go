@@ -6,4 +6,5 @@ var (
 	ErrAlreadyExists      = errors.New("already exists")
 	ErrNotFound           = errors.New("not found")
 	ErrPreconditionFailed = errors.New("precondition failed")
+	ErrInvalidArgument    = errors.New("invalid argument")
 )

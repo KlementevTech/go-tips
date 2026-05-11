@@ -16,18 +16,18 @@ var internalStatus = status.New(codes.Internal, "internal server error, see deta
 func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
-		return resp, handleErr(ctx, err, internalStatus)
+		return resp, handleErr(ctx, err)
 	}
 }
 
 func StreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(srv any, stream grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, stream)
-		return handleErr(stream.Context(), err, internalStatus)
+		return handleErr(stream.Context(), err)
 	}
 }
 
-func handleErr(ctx context.Context, err error, internalStatus *status.Status) error {
+func handleErr(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -36,29 +36,21 @@ func handleErr(ctx context.Context, err error, internalStatus *status.Status) er
 		return err
 	}
 
-	code := toGrpcCode(err)
-
-	if code == codes.Internal {
-		slog.Default().ErrorContext(ctx, "internal error", slog.String("error", err.Error()))
-		return internalStatus.Err()
-	}
-
-	return status.Error(code, err.Error())
-}
-
-func toGrpcCode(err error) codes.Code {
 	switch {
+	case errors.Is(err, domain.ErrInvalidArgument):
+		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrNotFound):
-		return codes.NotFound
+		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, domain.ErrPreconditionFailed):
-		return codes.FailedPrecondition
+		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, domain.ErrAlreadyExists):
-		return codes.AlreadyExists
+		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, context.Canceled):
-		return codes.Canceled
+		return status.Error(codes.Canceled, err.Error())
 	case errors.Is(err, context.DeadlineExceeded):
-		return codes.DeadlineExceeded
+		return status.Error(codes.DeadlineExceeded, err.Error())
 	default:
-		return codes.Internal
+		slog.Default().ErrorContext(ctx, "internal server error", "error", err)
+		return internalStatus.Err()
 	}
 }

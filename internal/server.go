@@ -6,10 +6,9 @@ import (
 	"log/slog"
 	"syscall"
 
-	catalogv1 "github.com/KlementevTech/gotips/internal/api/handlers/gotips/v1"
+	v1 "github.com/KlementevTech/gotips/internal/app/gotips/v1"
 	"github.com/KlementevTech/gotips/internal/config"
 	"github.com/KlementevTech/gotips/internal/pprof"
-	"github.com/KlementevTech/gotips/internal/service"
 	"github.com/KlementevTech/gotips/internal/storage/cache/pcpart"
 	"github.com/KlementevTech/gotips/internal/storage/postgres"
 	"github.com/KlementevTech/gotips/internal/transport/grpc"
@@ -34,20 +33,14 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		Shards:  cfg.Cache.Shards,
 	})
 
-	pcPartStoreService := service.NewPcPartStoreService(pcPartCache)
-
-	pcPartHandler := catalogv1.NewPcPartStoreHandler(pcPartStoreService)
+	pcPartStoreService := v1.NewPCPartStoreService(pcPartCache)
 
 	slog.Default().InfoContext(ctx, "service initialized, starting servers")
 
 	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return grpc.RunServer(
-			gCtx,
-			cfg.GRPC,
-			catalogv1.RegisterHandlersFunc(pcPartHandler),
-		)
+		return grpc.RunServer(gCtx, pcPartStoreService, cfg.GRPC)
 	})
 
 	if cfg.Pprof.Enable {

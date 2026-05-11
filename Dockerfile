@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux \
     -o /tmp/gotips \
     ./cmd/gotips
 
-FROM alpine:${ALPINE_VERSION}
+FROM alpine:${ALPINE_VERSION} as serve
 
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S gotips && adduser -S gotips -G gotips
@@ -35,4 +35,4 @@ USER gotips
 EXPOSE 50051 6060
 
 ENTRYPOINT ["/bin/gotips"]
-CMD ["-c", "/etc/gotips/config.toml"]
+CMD ["serve", "-c", "/etc/gotips/config.toml"]
