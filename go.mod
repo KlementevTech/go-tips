@@ -1,9 +1,9 @@
 module github.com/KlementevTech/gotips
 
-go 1.26.2
+go 1.26
 
 require (
-	github.com/brianvoe/gofakeit/v7 v7.14.1
+	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -12,7 +12,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/fastrand v1.1.0
 	golang.org/x/sync v0.20.0
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
 

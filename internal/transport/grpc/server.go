@@ -78,7 +78,8 @@ func RunServer(
 	go func() {
 		defer close(errCh)
 
-		slog.Default().InfoContext(ctx, "starting gRPC server",
+		slog.Default().InfoContext(
+			ctx, "starting gRPC server",
 			slog.String("address", cfg.Address),
 			slog.Bool("reflection", cfg.EnableReflection),
 			slog.Bool("health_check", cfg.EnableHealth),
