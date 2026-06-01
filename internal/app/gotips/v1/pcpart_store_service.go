@@ -6,16 +6,17 @@ import (
 
 	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
 	"github.com/KlementevTech/gotips/internal/domain"
+	"github.com/KlementevTech/gotips/internal/domain/repository"
 	"github.com/google/uuid"
 )
 
 type PCPartStoreService struct {
 	pb.UnimplementedPcPartStoreServiceServer
 
-	repo domain.Repository
+	repo repository.PCPartRepository
 }
 
-func NewPCPartStoreService(repo domain.Repository) *PCPartStoreService {
+func NewPCPartStoreService(repo repository.PCPartRepository) *PCPartStoreService {
 	return &PCPartStoreService{
 		repo: repo,
 	}
@@ -34,7 +35,7 @@ func (s *PCPartStoreService) CreatePcPart(
 		return nil, fmt.Errorf("invalid name: %s, %w", req.GetName(), domain.ErrInvalidArgument)
 	}
 
-	part, err := s.repo.CreatePcPart(ctx, domain.CreatePcPartParams{
+	part, err := s.repo.CreatePcPart(ctx, repository.CreatePcPartParams{
 		ID:   id,
 		Name: req.GetName(),
 	})
@@ -77,7 +78,7 @@ func (s *PCPartStoreService) UpdatePcPart(
 
 	version := fromVersionPb(req.GetVersion())
 
-	params := domain.UpdatePcPartParams{
+	params := repository.UpdatePcPartParams{
 		ID:      id,
 		Version: version,
 	}

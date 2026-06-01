@@ -8,7 +8,7 @@ import (
 	"time"
 
 	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
-	"github.com/KlementevTech/gotips/internal/transport/grpc/middleware/errlog"
+	"github.com/KlementevTech/gotips/internal/grpc/middleware/errlog"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/KlementevTech/gotips/internal/domain"
+	"github.com/KlementevTech/gotips/internal/domain/repository"
 	"github.com/KlementevTech/gotips/internal/storage/postgres/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -24,7 +25,7 @@ func NewStorage(pool *pgxpool.Pool) *Storage {
 	}
 }
 
-func (s *Storage) CreatePcPart(ctx context.Context, params domain.CreatePcPartParams) (*domain.PcPart, error) {
+func (s *Storage) CreatePcPart(ctx context.Context, params repository.CreatePcPartParams) (*domain.PcPart, error) {
 	const op = "postgres.CreatePcPart"
 
 	row, err := s.db(ctx).CreatePcPart(ctx, sqlc.CreatePcPartParams{
@@ -64,7 +65,7 @@ func (s *Storage) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcPa
 	return toPcPart(row), nil
 }
 
-func (s *Storage) UpdatePcPart(ctx context.Context, params domain.UpdatePcPartParams) (*domain.PcPart, error) {
+func (s *Storage) UpdatePcPart(ctx context.Context, params repository.UpdatePcPartParams) (*domain.PcPart, error) {
 	const op = "postgres.UpdatePcPart"
 
 	row, err := s.db(ctx).UpdatePcPart(ctx, sqlc.UpdatePcPartParams{

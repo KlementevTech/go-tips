@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/KlementevTech/gotips/internal/config"
+	"github.com/KlementevTech/gotips/internal"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -37,7 +37,7 @@ func addSeedsUpCmd(root *cobra.Command) {
 	root.AddCommand(seedsUpCmd)
 }
 
-func runSeedsUp(ctx context.Context, cfg *config.Config, count int) error {
+func runSeedsUp(ctx context.Context, cfg *internal.Config, count int) error {
 	if err := validateCount(count); err != nil {
 		return err
 	}

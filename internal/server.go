@@ -3,21 +3,19 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"syscall"
 
 	v1 "github.com/KlementevTech/gotips/internal/app/gotips/v1"
-	"github.com/KlementevTech/gotips/internal/config"
+	"github.com/KlementevTech/gotips/internal/grpc"
+	http2 "github.com/KlementevTech/gotips/internal/http"
 	"github.com/KlementevTech/gotips/internal/pprof"
 	"github.com/KlementevTech/gotips/internal/storage/cache/pcpart"
 	"github.com/KlementevTech/gotips/internal/storage/postgres"
-	"github.com/KlementevTech/gotips/internal/transport/grpc"
 	"golang.org/x/sync/errgroup"
 )
 
-func Run(ctx context.Context, cfg *config.Config) error {
-	ctx, cancel := waitForSignal(ctx, syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
+func Run(cfg *Config) error {
+	ctx := context.Background()
 
 	pgPool, closePgPool, err := postgres.NewPool(ctx, cfg.Postgres)
 	if err != nil {
@@ -35,17 +33,22 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	pcPartStoreService := v1.NewPCPartStoreService(pcPartCache)
 
-	slog.Default().InfoContext(ctx, "service initialized, starting servers")
-
-	g, gCtx := errgroup.WithContext(ctx)
+	ctx, cancel := waitForSignal(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return grpc.RunServer(gCtx, pcPartStoreService, cfg.GRPC)
+		return grpc.RunServer(ctx, pcPartStoreService, cfg.GRPC)
 	})
 
 	if cfg.Pprof.Enable {
 		g.Go(func() error {
-			return pprof.RunServer(gCtx, cfg.Pprof)
+			return http2.RunServer(
+				ctx,
+				cfg.Pprof.Address,
+				pprof.RegisterRoutes(),
+				http2.WithAlias("pprof"),
+			)
 		})
 	}
 

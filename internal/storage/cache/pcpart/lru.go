@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KlementevTech/gotips/internal/domain"
+	"github.com/KlementevTech/gotips/internal/domain/repository"
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/valyala/fastrand"
@@ -21,7 +22,7 @@ type LRUCache struct {
 	shardsCount uint32
 	shards      []*shard
 	sfg         singleflight.Group
-	storage     domain.Repository
+	storage     repository.PCPartRepository
 	timeout     time.Duration
 }
 
@@ -32,7 +33,7 @@ type LRUCacheConfig struct {
 	Shards  uint32
 }
 
-func NewLRUCache(storage domain.Repository, cfg *LRUCacheConfig) *LRUCache {
+func NewLRUCache(storage repository.PCPartRepository, cfg *LRUCacheConfig) *LRUCache {
 	const recentsCnt = 5
 
 	shards := make([]*shard, cfg.Shards)
@@ -51,7 +52,7 @@ func NewLRUCache(storage domain.Repository, cfg *LRUCacheConfig) *LRUCache {
 	}
 }
 
-func (c *LRUCache) CreatePcPart(ctx context.Context, params domain.CreatePcPartParams) (*domain.PcPart, error) {
+func (c *LRUCache) CreatePcPart(ctx context.Context, params repository.CreatePcPartParams) (*domain.PcPart, error) {
 	return c.storage.CreatePcPart(ctx, params)
 }
 
@@ -143,7 +144,7 @@ func (c *LRUCache) GetPcPartByID(ctx context.Context, id uuid.UUID) (*domain.PcP
 	return res, nil
 }
 
-func (c *LRUCache) UpdatePcPart(ctx context.Context, params domain.UpdatePcPartParams) (*domain.PcPart, error) {
+func (c *LRUCache) UpdatePcPart(ctx context.Context, params repository.UpdatePcPartParams) (*domain.PcPart, error) {
 	return c.storage.UpdatePcPart(ctx, params)
 }
 

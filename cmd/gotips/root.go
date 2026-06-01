@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/KlementevTech/gotips/internal/config"
+	"github.com/KlementevTech/gotips/internal"
 	"github.com/KlementevTech/gotips/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ import (
 var (
 	version = "dev"
 	cfgFile string
-	cfg     *config.Config
+	cfg     *internal.Config
 )
 
 func newRootCmd() *cobra.Command {
@@ -25,7 +25,7 @@ func newRootCmd() *cobra.Command {
 			setLevel := log.SetupJSONLog(log.WithVersion(version))
 
 			var err error
-			cfg, err = config.LoadFromFile(cfgFile)
+			cfg, err = internal.LoadConfig(cfgFile)
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
