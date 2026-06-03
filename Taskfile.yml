@@ -23,7 +23,7 @@ vars:
   PPROF_OUT_DIR: 'pprof_data'
 
   GOLANGCI_VERSION: v2.12.2
-  BUF_VERSION: v1.69.0
+  BUF_VERSION: v1.70.0
 
 tasks:
   default:
