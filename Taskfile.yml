@@ -35,17 +35,12 @@ tasks:
   lint:check:
     desc: "Проверка линтером"
     cmds:
-      - golangci-lint run ./...
+      - golangci-lint run
 
-  lint:fix:
+  lint:format:
     desc: "Форматирование линтером"
     cmds:
       - golangci-lint run --fix
-
-  lint:format:
-    desc: "Форматирование"
-    cmds:
-      - gofumpt -l -w .
 
   test:run:
     desc: "Запуск тестов"
@@ -83,15 +78,11 @@ tasks:
   git:pre-commit:
     desc: "Запуск проверок перед коммитом"
     cmds:
-      - cmd: echo "Форматирование..."
+      - cmd: echo "Форматирование golangci-lint..."
         silent: true
       - task: lint:format
 
-      - cmd: echo "Форматирование линтером..."
-        silent: true
-      - task: lint:fix
-
-      - cmd: echo "Проверка линтером..."
+      - cmd: echo "Проверка golangci-lint..."
         silent: true
       - task: lint:check
 
@@ -208,10 +199,6 @@ tasks:
       - cmd: echo "Установка линтера golangci-lint..."
         silent: true
       - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
-
-      - cmd: echo "Установка форматера gofumpt..."
-        silent: true
-      - go install mvdan.cc/gofumpt@latest
 
       - cmd: echo "Установка buf..."
         silent: true
