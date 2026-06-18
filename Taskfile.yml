@@ -12,18 +12,20 @@ vars:
   DOCKER_IMAGE_TAGGED: '{{.DOCKER_IMAGE}}:{{.VERSION}}'
   DOCKER_IMAGE_LATEST: '{{.DOCKER_IMAGE}}:latest'
 
-  POSTGRES_USER: gotips
-  POSTGRES_PASSWORD: gotips
-  POSTGRES_DB: gotips
-  POSTGRES_DSN: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@localhost:5432/{{.POSTGRES_DB}}?sslmode=disable'
-  POSTGRES_DRIVER: pgx
-  POSTGRES_MIGRATIONS: 'migrations/postgres'
+  PG_USER: gotips
+  PG_PASSWORD: gotips
+  PG_DB: gotips
+  PG_DSN: 'postgres://{{.PG_USER}}:{{.PG_PASSWORD}}@localhost:5432/{{.PG_DB}}?sslmode=disable'
+  PG_DRIVER: pgx
+  PG_MIGRATIONS: 'migrations/postgres'
 
   PPROF_ADDR: 'localhost:6060'
   PPROF_OUT_DIR: 'pprof_data'
 
   GOLANGCI_VERSION: v2.12.2
   BUF_VERSION: v1.70.0
+
+  BIN_DIR: '{{.USER_WORKING_DIR}}/bin'
 
 tasks:
   default:
@@ -35,12 +37,12 @@ tasks:
   lint:check:
     desc: "Проверка линтером"
     cmds:
-      - golangci-lint run
+      - '{{.BIN_DIR}}/golangci-lint run'
 
   lint:format:
     desc: "Форматирование линтером"
     cmds:
-      - golangci-lint run --fix
+      - '{{.BIN_DIR}}/golangci-lint run --fix'
 
   test:run:
     desc: "Запуск тестов"
@@ -61,7 +63,7 @@ tasks:
     desc: "Запускает ghz нагрузочный тест"
     cmds:
       - |
-        ghz --insecure \
+        {{.BIN_DIR}}/ghz --insecure \
           -i $(pwd)/api/proto \
           --proto $(pwd)/api/proto/gotips/v1/pcpart_store_service.proto \
           --call gotips.v1.PcPartStoreService/GetPcPartsRecent \
@@ -108,17 +110,17 @@ tasks:
   proto:gen:
     desc: "Генерирует protobuf файлы"
     cmds:
-      - buf generate
+      - '{{.BIN_DIR}}/buf generate'
 
   proto:lint:
     desc: "Проверка proto файлов"
     cmds:
-      - buf lint
+      - '{{.BIN_DIR}}/buf lint'
 
   proto:lint:changes:
     desc: "Проверка обратной совместимости proto файлов"
     cmds:
-      - buf breaking --against ".git#branch=main"
+      - '{{.BIN_DIR}}/buf breaking --against ".git#branch=main"'
 
   docker:build:
     desc: "Собирает Docker образ"
@@ -154,14 +156,14 @@ tasks:
   sqlc:gen:
     desc: "Кодогенерация sqlc"
     cmds:
-      - sqlc generate
+      - '{{.BIN_DIR}}/sqlc generate'
 
   migrate:create:
     desc: "Создать миграцию. Пример: task migrate-create name=add_parts"
     vars:
       NAME: '{{.name | default "migration"}}'
     cmds:
-      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} create {{.NAME}} sql
+      - '{{.BIN_DIR}}/goose -dir {{.PG_MIGRATIONS}} {{.PG_DRIVER}} {{.PG_DSN}} create {{.NAME}} sql'
     preconditions:
       - sh: 'test -n "{{.NAME}}"'
         msg: "Ошибка: нужно указать имя. Используй: task migrate-create name=имя_миграции"
@@ -169,27 +171,27 @@ tasks:
   migrate:status:
     desc: "Проверить статус миграций, инициализирует goose_db_version таблицу"
     cmds:
-      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} status
+      - '{{.BIN_DIR}}/goose -dir {{.PG_MIGRATIONS}} {{.PG_DRIVER}} {{.PG_DSN}} status'
 
   migrate:up:
     desc: "Накатить миграции"
     cmds:
-      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} up
+      - '{{.BIN_DIR}}/goose -dir {{.PG_MIGRATIONS}} {{.PG_DRIVER}} {{.PG_DSN}} up'
 
   migrate:down:
     desc: "Откатить последнюю миграцию"
     cmds:
-      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} down
+      - '{{.BIN_DIR}}/goose -dir {{.PG_MIGRATIONS}} {{.PG_DRIVER}} {{.PG_DSN}} down'
 
   migrate:reset:
     desc: "Сбросить ВСЮ базу (удалить все таблицы)"
     cmds:
-      - goose -dir {{.POSTGRES_MIGRATIONS}} {{.POSTGRES_DRIVER}} {{.POSTGRES_DSN}} reset
+      - '{{.BIN_DIR}}/goose -dir {{.PG_MIGRATIONS}} {{.PG_DRIVER}} {{.PG_DSN}} reset'
 
   seeds:up:
     desc: "Наполняет Postgres тестовыми данными"
     env:
-      POSTGRES_DSN: "{{.POSTGRES_DSN}}"
+      PG_DSN: "{{.PG_DSN}}"
     cmds:
       - go run ./cmd/gotips seeds-up
 
@@ -198,24 +200,24 @@ tasks:
     cmds:
       - cmd: echo "Установка линтера golangci-lint..."
         silent: true
-      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_VERSION}}
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b {{.BIN_DIR}} {{.GOLANGCI_VERSION}}
 
       - cmd: echo "Установка buf..."
         silent: true
-      - go install github.com/bufbuild/buf/cmd/buf@{{.BUF_VERSION}}
+      - GOBIN={{.BIN_DIR}} go install github.com/bufbuild/buf/cmd/buf@{{.BUF_VERSION}}
 
       - cmd: echo "Установка protoc плагинов..."
         silent: true
-      - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-      - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+      - GOBIN={{.BIN_DIR}} go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      - GOBIN={{.BIN_DIR}} go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - cmd: echo "Установка db мигратора goose..."
         silent: true
-      - go install github.com/pressly/goose/v3/cmd/goose@latest
+      - GOBIN={{.BIN_DIR}} go install github.com/pressly/goose/v3/cmd/goose@latest
 
       - cmd: echo "Установка sqlc..."
         silent: true
-      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - GOBIN={{.BIN_DIR}} go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
       - cmd: echo "[OK] Все Dev зависимости установлены."
         silent: true
@@ -223,12 +225,12 @@ tasks:
   install:grpcurl:
     desc: "Установка grpcurl"
     cmds:
-      - go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+      - GOBIN={{.BIN_DIR}} go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
   install:ghz:
     desc: "Установка ghz, нагрузочный бенч"
     cmds:
-      - go install github.com/bojand/ghz/cmd/ghz@latest
+      - GOBIN={{.BIN_DIR}} go install github.com/bojand/ghz/cmd/ghz@latest
 
   pprof:setup:
     desc: "Создать директорию для дампов"
