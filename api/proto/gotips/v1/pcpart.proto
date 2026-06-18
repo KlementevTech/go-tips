@@ -4,8 +4,6 @@ package gotips.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1;gotipsv1";
-
 message PcPart {
   string id = 1;
   string name = 3;

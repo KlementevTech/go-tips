@@ -595,7 +595,9 @@ const file_gotips_v1_pcpart_store_service_proto_rawDesc = "" +
 	"\tGetPcPart\x12\x1b.gotips.v1.GetPcPartRequest\x1a\x1c.gotips.v1.GetPcPartResponse\x12[\n" +
 	"\x10GetPcPartsRecent\x12\".gotips.v1.GetPcPartsRecentRequest\x1a#.gotips.v1.GetPcPartsRecentResponse\x12O\n" +
 	"\fUpdatePcPart\x12\x1e.gotips.v1.UpdatePcPartRequest\x1a\x1f.gotips.v1.UpdatePcPartResponse\x12O\n" +
-	"\fDeletePcPart\x12\x1e.gotips.v1.DeletePcPartRequest\x1a\x1f.gotips.v1.DeletePcPartResponseB?Z=github.com/KlementevTech/gotips/api/gen/pb/gotips/v1;gotipsv1b\x06proto3"
+	"\fDeletePcPart\x12\x1e.gotips.v1.DeletePcPartRequest\x1a\x1f.gotips.v1.DeletePcPartResponseB\xac\x01\n" +
+	"\rcom.gotips.v1B\x17PcpartStoreServiceProtoP\x01Z=github.com/KlementevTech/gotips/api/gen/go/gotips/v1;gotipsv1\xa2\x02\x03GXX\xaa\x02\tGotips.V1\xca\x02\tGotips\\V1\xe2\x02\x15Gotips\\V1\\GPBMetadata\xea\x02\n" +
+	"Gotips::V1b\x06proto3"
 
 var (
 	file_gotips_v1_pcpart_store_service_proto_rawDescOnce sync.Once

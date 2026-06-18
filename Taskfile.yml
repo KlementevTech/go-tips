@@ -28,18 +28,12 @@ vars:
   BIN_DIR: '{{.USER_WORKING_DIR}}/bin'
 
 tasks:
-  default:
-    desc: "Листинг команд"
-    cmds:
-      - task --list
-    silent: true
-
-  lint:check:
+  linter:lint:
     desc: "Проверка линтером"
     cmds:
       - '{{.BIN_DIR}}/golangci-lint run'
 
-  lint:format:
+  linter:format:
     desc: "Форматирование линтером"
     cmds:
       - '{{.BIN_DIR}}/golangci-lint run --fix'
@@ -82,15 +76,15 @@ tasks:
     cmds:
       - cmd: echo "Форматирование golangci-lint..."
         silent: true
-      - task: lint:format
+      - task: linter:format
 
       - cmd: echo "Проверка golangci-lint..."
         silent: true
-      - task: lint:check
+      - task: linter:lint
 
       - cmd: echo "Проверка proto файлов..."
         silent: true
-      - task: proto:lint
+      - task: pb:lint
 
       - cmd: echo "Запуск тестов..."
         silent: true
@@ -100,25 +94,24 @@ tasks:
         silent: true
       - task: mod:tidy
 
-      #- cmd: echo "Сборка образа Docker..."
-      #  silent: true
-      #- task: docker:build
-
       - cmd: echo "[OK] Все проверки пройдены."
         silent: true
 
-  proto:gen:
+  pb:gen:
     desc: "Генерирует protobuf файлы"
+    dir: api
     cmds:
       - '{{.BIN_DIR}}/buf generate'
 
-  proto:lint:
+  pb:lint:
     desc: "Проверка proto файлов"
+    dir: api
     cmds:
       - '{{.BIN_DIR}}/buf lint'
 
-  proto:lint:changes:
+  pb:lint:changes:
     desc: "Проверка обратной совместимости proto файлов"
+    dir: api
     cmds:
       - '{{.BIN_DIR}}/buf breaking --against ".git#branch=main"'
 
@@ -284,3 +277,8 @@ tasks:
       - curl -s http://{{.PPROF_ADDR}}/debug/pprof/allocs > {{.PPROF_OUT_DIR}}/allocs.out
       - curl -s http://{{.PPROF_ADDR}}/debug/pprof/block > {{.PPROF_OUT_DIR}}/block.out
       - echo "All snapshots saved to {{.PPROF_OUT_DIR}}"
+
+  default:
+    desc: "Листинг команд"
+    cmd: task --list
+    silent: true

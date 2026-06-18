@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
+	pb "github.com/KlementevTech/gotips/api/gen/go/gotips/v1"
 	"github.com/KlementevTech/gotips/internal/domain"
 	"github.com/KlementevTech/gotips/internal/domain/repository"
 	"github.com/google/uuid"

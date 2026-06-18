@@ -3,7 +3,7 @@ package v1
 import (
 	"time"
 
-	pb "github.com/KlementevTech/gotips/api/gen/pb/gotips/v1"
+	pb "github.com/KlementevTech/gotips/api/gen/go/gotips/v1"
 	"github.com/KlementevTech/gotips/internal/domain"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

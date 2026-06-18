@@ -32,5 +32,7 @@ go.work.sum
 # .vscode/
 
 pprof_data/
-bin/
+
+bin/*
 !bin/.gitkeep
+
