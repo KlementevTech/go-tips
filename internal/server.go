@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"syscall"
 
-	v1 "github.com/KlementevTech/gotips/internal/app/gotips/v1"
+	gotipsv1 "github.com/KlementevTech/gotips/internal/app/gotips/v1"
+	"github.com/KlementevTech/gotips/internal/app/todos"
 	"github.com/KlementevTech/gotips/internal/grpc"
-	http2 "github.com/KlementevTech/gotips/internal/http"
+	"github.com/KlementevTech/gotips/internal/http"
 	"github.com/KlementevTech/gotips/internal/pprof"
 	"github.com/KlementevTech/gotips/internal/storage/cache/pcpart"
 	"github.com/KlementevTech/gotips/internal/storage/postgres"
@@ -31,23 +32,26 @@ func Run(cfg *Config) error {
 		Shards:  cfg.Cache.Shards,
 	})
 
-	pcPartStoreService := v1.NewPCPartStoreService(pcPartCache)
-
 	ctx, cancel := waitForSignal(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return grpc.RunServer(ctx, pcPartStoreService, cfg.GRPC)
+		return grpc.RunServer(
+			ctx,
+			gotipsv1.NewPCPartStoreService(pcPartCache),
+			todos.NewService(),
+			cfg.GRPC,
+		)
 	})
 
 	if cfg.Pprof.Enable {
 		g.Go(func() error {
-			return http2.RunServer(
+			return http.RunServer(
 				ctx,
 				cfg.Pprof.Address,
 				pprof.RegisterRoutes(),
-				http2.WithAlias("pprof"),
+				http.WithAlias("pprof"),
 			)
 		})
 	}

@@ -111,9 +111,7 @@ const file_gotips_v1_pcpart_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12>\n" +
 	"\n" +
 	"deleted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tdeletedAt\x88\x01\x01B\r\n" +
-	"\v_deleted_atB\xa0\x01\n" +
-	"\rcom.gotips.v1B\vPcpartProtoP\x01Z=github.com/KlementevTech/gotips/api/gen/go/gotips/v1;gotipsv1\xa2\x02\x03GXX\xaa\x02\tGotips.V1\xca\x02\tGotips\\V1\xe2\x02\x15Gotips\\V1\\GPBMetadata\xea\x02\n" +
-	"Gotips::V1b\x06proto3"
+	"\v_deleted_atB?Z=github.com/KlementevTech/gotips/api/gen/go/gotips/v1;gotipsv1b\x06proto3"
 
 var (
 	file_gotips_v1_pcpart_proto_rawDescOnce sync.Once

@@ -5,6 +5,10 @@ modules:
 lint:
   use:
     - STANDARD
+  ignore:
+    - proto/buf/validate/validate.proto
 breaking:
   use: 
     - FILE
+  ignore:
+    - proto/buf/validate/validate.proto

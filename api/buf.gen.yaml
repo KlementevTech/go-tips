@@ -1,4 +1,8 @@
 version: v2
+inputs:
+  - directory: proto
+    exclude_paths:
+      - proto/buf/validate/validate.proto
 plugins:
   - local: ../bin/protoc-gen-go
     out: gen/go
@@ -9,8 +13,3 @@ plugins:
     out: gen/go
     opt:
       - paths=source_relative
-managed:
-  enabled: true
-  override:
-    - file_option: go_package_prefix
-      value: github.com/KlementevTech/gotips/api/gen/go

@@ -5,6 +5,8 @@ package gotips.v1;
 import "google/protobuf/field_mask.proto";
 import "gotips/v1/pcpart.proto";
 
+option go_package = "github.com/KlementevTech/gotips/api/gen/go/gotips/v1;gotipsv1";
+
 service PcPartStoreService {
   rpc CreatePcPart(CreatePcPartRequest) returns (CreatePcPartResponse);
   rpc GetPcPart(GetPcPartRequest) returns (GetPcPartResponse);

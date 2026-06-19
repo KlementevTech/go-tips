@@ -2,13 +2,17 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"time"
 
-	pb "github.com/KlementevTech/gotips/api/gen/go/gotips/v1"
+	"buf.build/go/protovalidate"
+	gotipsv1 "github.com/KlementevTech/gotips/api/gen/go/gotips/v1"
+	todosv1 "github.com/KlementevTech/gotips/api/gen/go/todos/v1"
 	"github.com/KlementevTech/gotips/internal/grpc/middleware/errlog"
+	protovalidatemiddleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -30,17 +34,25 @@ type Config struct {
 
 func RunServer(
 	ctx context.Context,
-	pcPartStoreService pb.PcPartStoreServiceServer,
+	pcPartStoreService gotipsv1.PcPartStoreServiceServer,
+	todosService todosv1.TodosServiceServer,
 	cfg Config,
 ) error {
+	validator, err := protovalidate.New()
+	if err != nil {
+		return errors.New("failed to create protovalidate validator")
+	}
+
 	middlewares := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			recovery.UnaryServerInterceptor(),
 			errlog.UnaryServerInterceptor(),
+			protovalidatemiddleware.UnaryServerInterceptor(validator),
 		),
 		grpc.ChainStreamInterceptor(
 			recovery.StreamServerInterceptor(),
 			errlog.StreamServerInterceptor(),
+			protovalidatemiddleware.StreamServerInterceptor(validator),
 		),
 	}
 
@@ -63,9 +75,8 @@ func RunServer(
 		reflection.Register(srv)
 	}
 
-	if pcPartStoreService != nil {
-		pb.RegisterPcPartStoreServiceServer(srv, pcPartStoreService)
-	}
+	gotipsv1.RegisterPcPartStoreServiceServer(srv, pcPartStoreService)
+	todosv1.RegisterTodosServiceServer(srv, todosService)
 
 	var lc net.ListenConfig
 	lis, err := lc.Listen(ctx, "tcp", cfg.Address)

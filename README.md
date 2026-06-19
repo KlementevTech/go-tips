@@ -40,3 +40,10 @@ grpcurl -plaintext \
     127.0.0.1:50051 \
     gotips.v1.PcPartStoreService/GetPcPartsRecent
 ```
+
+```shell
+grpcurl -plaintext \
+    -d '{"page_size": 1000}' \
+    127.0.0.1:50051 \
+    todos.v1.TodosService/ListTodos
+```

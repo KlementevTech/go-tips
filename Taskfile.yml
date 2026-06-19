@@ -115,6 +115,12 @@ tasks:
     cmds:
       - '{{.BIN_DIR}}/buf breaking --against ".git#branch=main"'
 
+  pb:deps:update:
+    desc: "Обновляет Buf зависимости..."
+    dir: api
+    cmds:
+      - '{{.BIN_DIR}}/buf dep update'
+
   docker:build:
     desc: "Собирает Docker образ"
     cmds:
@@ -218,12 +224,12 @@ tasks:
   install:grpcurl:
     desc: "Установка grpcurl"
     cmds:
-      - GOBIN={{.BIN_DIR}} go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+      - go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
   install:ghz:
     desc: "Установка ghz, нагрузочный бенч"
     cmds:
-      - GOBIN={{.BIN_DIR}} go install github.com/bojand/ghz/cmd/ghz@latest
+      - go install github.com/bojand/ghz/cmd/ghz@latest
 
   pprof:setup:
     desc: "Создать директорию для дампов"

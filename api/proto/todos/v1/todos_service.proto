@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package todos.v1;
+
+import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/KlementevTech/gotips/api/gen/go/todos/v1;todosv1";
+
+enum TodoStatus {
+  TODO_STATUS_UNSPECIFIED = 0;
+  TODO_STATUS_CREATED = 1;
+  TODO_STATUS_COMPLETED = 2;
+}
+
+message Todo {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  TodoStatus status = 4;
+
+  google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp completed_at = 6;
+  optional google.protobuf.Timestamp deleted_at = 7;
+}
+
+message AddTodoRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string title = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  string description = 3 [(buf.validate.field).string.max_len = 500];
+}
+
+message AddTodoResponse {}
+
+message ListTodosRequest {
+  int32 page_size = 1 [
+    (buf.validate.field).int32.gte = 1,
+    (buf.validate.field).int32.lte = 20
+  ];
+}
+
+message ListTodosResponse {
+  repeated Todo todos = 1;
+}
+
+message CompleteTodoRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message CompleteTodoResponse {}
+
+message DeleteTodoRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message DeleteTodoResponse {}
+
+service TodosService {
+  rpc AddTodo(AddTodoRequest) returns (AddTodoResponse);
+  rpc ListTodos(ListTodosRequest) returns (ListTodosResponse);
+  rpc CompleteTodo(CompleteTodoRequest) returns (CompleteTodoResponse);
+  rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse);
+}
